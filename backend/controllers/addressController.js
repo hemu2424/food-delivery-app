@@ -1,4 +1,5 @@
 import Address from "../models/Address.js";
+import reverseGeocode from "../utils/reversegeocode.js";
 import searchAddress from "../utils/searchAddress.js";
 
 
@@ -16,22 +17,21 @@ async function createAddress(req, res, next) {
   try {
     const { latitude, longitude, isDefault, ...rest } = req.body;
 
-    
     if (isDefault) {
       await Address.updateMany({ user: req.user._id, isDefault: true }, { isDefault: false });
     }
 
-   
     const existingCount = await Address.countDocuments({ user: req.user._id });
     const shouldBeDefault = isDefault || existingCount === 0;
 
     const address = await Address.create({
       ...rest,
+      city: rest.city || rest.locality || "Not specified", 
       user: req.user._id,
       isDefault: shouldBeDefault,
       location: {
         type: "Point",
-        coordinates: [longitude, latitude], 
+        coordinates: [longitude, latitude],
       },
     });
 
@@ -120,4 +120,17 @@ async function searchAddressSuggestions(req, res, next) {
   }
 }
 
-export { getMyAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress ,searchAddressSuggestions};
+async function reverseGeocodeLocation(req, res, next) {
+  try {
+    const { lat, lng } = req.query;
+    const result = await reverseGeocode(parseFloat(lat), parseFloat(lng));
+    if (!result) {
+      return res.status(404).json({ message: "Could not determine address for this location" });
+    }
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export { getMyAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress ,searchAddressSuggestions,reverseGeocodeLocation};

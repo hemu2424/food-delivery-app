@@ -7,7 +7,7 @@ const storage = new CloudinaryStorage({
   params: async (req, file) => {
     const isVideo = file.fieldname === "video";
     return {
-      folder: "food-delivery",            
+      folder: "food-delivery",
       resource_type: isVideo ? "video" : "image",
       allowed_formats: isVideo ? ["mp4", "webm"] : ["jpg", "jpeg", "png", "webp"],
     };
@@ -18,7 +18,11 @@ function fileFilter(req, file, cb) {
   const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
   const allowedVideoTypes = ["video/mp4", "video/webm"];
 
-  if (file.fieldname === "images" && allowedImageTypes.includes(file.mimetype)) {
+  
+  if (
+    (file.fieldname === "images" || file.fieldname === "avatar") &&
+    allowedImageTypes.includes(file.mimetype)
+  ) {
     cb(null, true);
   } else if (file.fieldname === "video" && allowedVideoTypes.includes(file.mimetype)) {
     cb(null, true);

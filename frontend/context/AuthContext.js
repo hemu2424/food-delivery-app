@@ -94,9 +94,19 @@ async function resetPassword(email, otp, newPassword) {
   const response = await api.post("/auth/reset-password", { email, otp, newPassword });
   return response.data;
 }
+async function updateProfile(formData) {
+  const response = await api.put("/auth/me", formData);
+  setUser(response.data);
+  return response.data;
+}
+
+async function changePassword(currentPassword, newPassword) {
+  const response = await api.put("/auth/change-password", { currentPassword, newPassword });
+  return response.data;
+}
 
 return (
-    <AuthContext.Provider value = {{user,loading,register,login,logout,verifyEmail,resendOtp,forgotPassword,resetPassword}}>
+    <AuthContext.Provider value = {{user,loading,register,login,logout,verifyEmail,resendOtp,forgotPassword,resetPassword,updateProfile,changePassword}}>
         {children}
     </AuthContext.Provider>
 )

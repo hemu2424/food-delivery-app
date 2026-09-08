@@ -20,18 +20,18 @@ const addressSchema = new mongoose.Schema(
       type: String,
       default: "", // area/street, comes from the search result the user picked
     },
-    city: {
-      type: String,
-      required: true,
-    },
+   city: {
+  type: String,
+  default: "Not specified", 
+},
     state: {
       type: String,
       required: true,
     },
     pincode: {
-      type: String,
-      required: true,
-    },
+  type: String,
+  default: "",
+},
     country: {
       type: String,
       default: "India",

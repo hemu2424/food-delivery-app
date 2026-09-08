@@ -6,6 +6,7 @@ import {
   deleteAddress,
   setDefaultAddress,
   searchAddressSuggestions,
+  reverseGeocodeLocation,
 } from "../controllers/addressController.js";
 import { protect } from "../middlewares/auth.js";
 import validate from "../middlewares/validate.js";
@@ -17,6 +18,7 @@ router.use(protect);
 
 router.get("/", getMyAddresses);
 router.get("/search", searchAddressSuggestions);
+router.get("/reverse-geocode", reverseGeocodeLocation);
 router.post("/", validate(createAddressSchema), createAddress);
 router.put("/:id", validate(updateAddressSchema), updateAddress);
 router.delete("/:id", deleteAddress);

@@ -3,31 +3,31 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
 
-export default function Navbar(){
+export default function Navbar() {
   const { logout, user } = useAuth();
   const { itemCount } = useCart();
 
-  const homeLink = !user 
-    ? "/" 
-    : user.role === "admin" 
-    ? "/admin/dashboard" 
-    : user.role === "delivery" 
-    ? "/delivery/dashboard" 
-    : "/user/dashboard";
+  const homeLink = !user
+    ? "/"
+    : user.role === "admin"
+      ? "/admin/dashboard"
+      : user.role === "delivery"
+        ? "/delivery/dashboard"
+        : "/user/dashboard";
 
   return (
     <nav className="w-full bg-white shadow-sm">
-     
+
       <div className="max-w-6xl mx-auto px-4 py-3 grid grid-cols-3 items-center">
-        
-       
+
+
         <div className="flex justify-start">
           <Link href={homeLink} className="text-xl font-bold text-orange-500">
             FoodDelivery
           </Link>
         </div>
 
-       
+
         <div className="flex justify-center">
           {user?.role && (
             <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full text-orange-700 ">
@@ -36,9 +36,9 @@ export default function Navbar(){
           )}
         </div>
 
-        
+
         <div className="flex justify-end">
-        
+
           <div className="hidden md:flex items-center gap-4">
             {!user && (
               <>
@@ -46,6 +46,7 @@ export default function Navbar(){
                 <Link href="/register" className="text-sm text-white bg-orange-500 px-3 py-1 rounded-md hover:bg-orange-600">Register</Link>
               </>
             )}
+
 
             {user && user.role === "user" && (
               <>
@@ -67,17 +68,29 @@ export default function Navbar(){
                 <Link href="/admin/orders" className="text-sm text-gray-700 hover:text-orange-500">Orders</Link>
               </>
             )}
+            {user && (
+              <Link href="/profile" className="hover:text-primary flex items-center gap-1">
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <span className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                    {user.name?.[0]?.toUpperCase()}
+                  </span>
+                )}
+                <span className="text-sm text-gray-700 font-medium"> {user.name}</span>
+
+              </Link>
+            )}
 
             {user && (
               <div className="flex items-center gap-3 ml-2  pl-3 border-gray-200">
-                <span className="text-sm text-gray-700 font-medium"> {user.name}</span>
                 <button onClick={logout} className="text-sm text-gray-600 hover:text-red-600 font-medium">Logout</button>
               </div>
             )}
           </div>
 
-          
-         
+
+
         </div>
 
       </div>

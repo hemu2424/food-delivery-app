@@ -7,8 +7,10 @@ import { useLocation } from "@/context/LocationContext";
 import RestaurantCard from "@/components/user/RestaurantCard";
 import RestaurantCardSkeleton from "@/components/shared/RestaurantCardSkeleton";
 import LocationPrompt from "@/components/user/LocationPrompt";
+import { useAddresses } from "@/context/AddressContext";
 
 function DashboardContent() {
+  const { fetchAddresses } = useAddresses();
   const { coordinates, status, LOCATION_STATUS } = useLocation();
   const { nearbyRestaurants, nearbySearchRadiusKm, nearbyLoading, nearbyError, fetchNearbyRestaurants } =
     useRestaurants();
@@ -18,6 +20,9 @@ function DashboardContent() {
       fetchNearbyRestaurants(coordinates.latitude, coordinates.longitude);
     }
   }, [status, coordinates, LOCATION_STATUS, fetchNearbyRestaurants]);
+  useEffect(() => {
+  fetchAddresses();
+}, [fetchAddresses]);
 
   return (
     <>

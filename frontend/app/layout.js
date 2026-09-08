@@ -10,6 +10,7 @@ import { AdminProvider } from "@/context/AdminContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { LocationProvider } from "@/context/LocationContext";
+import { AddressProvider } from "@/context/AddressContext";
 
 
 const geistSans = Geist({
@@ -31,27 +32,31 @@ export default function RootLayout({ children }) {
   return (
       <html lang="en">
       <body>
-        <ToastProvider>
-        <AuthProvider>
-          <LocationProvider>
-          <SocketProvider>
-          <CartProvider>
-            <OrderProvider>
-          <RestaurantProvider>
-            <MenuItemProvider>
-            <AdminProvider>
-          <Navbar />
-          {children}
-          </AdminProvider>
-          </MenuItemProvider>
-          </RestaurantProvider>
-          </OrderProvider>
-          </CartProvider>
-          </SocketProvider>
-          </LocationProvider>
-        </AuthProvider>
-        </ToastProvider>
-      </body>
+  <ToastProvider>
+    <AuthProvider>
+      <AddressProvider>
+      <LocationProvider>
+        <SocketProvider>
+          <AddressProvider>
+            <CartProvider>
+              <OrderProvider>
+                <RestaurantProvider>
+                  <MenuItemProvider>
+                    <AdminProvider>
+                      <Navbar />
+                      {children}
+                    </AdminProvider>
+                  </MenuItemProvider>
+                </RestaurantProvider>
+              </OrderProvider>
+            </CartProvider>
+          </AddressProvider>
+        </SocketProvider>
+      </LocationProvider>
+      </AddressProvider>
+    </AuthProvider>
+  </ToastProvider>
+</body>
     </html>
   );
 }

@@ -44,10 +44,14 @@ export function AddressProvider({ children }) {
     const response = await api.get(`/addresses/search?query=${encodeURIComponent(query)}`);
     return response.data;
   }
+  async function reverseGeocode(latitude, longitude) {
+  const response = await api.get(`/addresses/reverse-geocode?lat=${latitude}&lng=${longitude}`);
+  return response.data;
+}
 
   return (
     <AddressContext.Provider
-      value={{ addresses, loading, error, fetchAddresses, createAddress, deleteAddress, setDefaultAddress, searchAddresses }}
+      value={{ addresses, loading, error, fetchAddresses, createAddress, deleteAddress, setDefaultAddress, searchAddresses ,reverseGeocode}}
     >
       {children}
     </AddressContext.Provider>

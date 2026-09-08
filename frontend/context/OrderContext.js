@@ -7,6 +7,7 @@ const OrderContext = createContext(null);
 
 export function OrderProvider({ children }) {
   const [myOrders, setMyOrders] = useState([]);
+  const [myOrdersPagination, setMyOrdersPagination] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -17,37 +18,43 @@ export function OrderProvider({ children }) {
   const [deliveryError, setDeliveryError] = useState("");
 
   const [allOrders, setAllOrders] = useState([]);
-const [adminOrdersLoading, setAdminOrdersLoading] = useState(false);
-const [adminOrdersError, setAdminOrdersError] = useState("");
+  const [allOrdersPagination, setAllOrdersPagination] = useState(null);
+  const [adminOrdersLoading, setAdminOrdersLoading] = useState(false);
+  const [adminOrdersError, setAdminOrdersError] = useState("");
 
-function removeAvailableOrderLocally(orderId) {
-  setAvailableOrders((prev) => prev.filter((order) => order._id !== orderId));
-}
-
-const fetchAllOrders = useCallback(async () => {
-  setAdminOrdersLoading(true);
-  try {
-    const response = await api.get("/orders");
-    setAllOrders(response.data);
-    setAdminOrdersError("");
-  } catch (err) {
-    setAdminOrdersError("Could not load orders.");
-  } finally {
-    setAdminOrdersLoading(false);
+  function removeAvailableOrderLocally(orderId) {
+    setAvailableOrders((prev) => prev.filter((order) => order._id !== orderId));
   }
-}, []);
 
-async function advanceOrderStatus(orderId, newStatus, currentPage = 1) {
-  await api.put(`/orders/${orderId}/status`, { status: newStatus });
-  await fetchAllOrders(currentPage);
-}
-//   ---
+  const fetchAllOrders = useCallback(async (page = 1) => {
+    setAdminOrdersLoading(true);
+    try {
+      const response = await api.get("/orders", { params: { page } });
+      const orders = Array.isArray(response.data) ? response.data : response.data.orders || [];
+      const pagination = response.data?.pagination || null;
+      setAllOrders(orders);
+      setAllOrdersPagination(pagination);
+      setAdminOrdersError("");
+    } catch (err) {
+      setAdminOrdersError("Could not load orders.");
+    } finally {
+      setAdminOrdersLoading(false);
+    }
+  }, []);
 
-  const fetchMyOrders = useCallback(async () => {
+  async function advanceOrderStatus(orderId, newStatus, currentPage = 1) {
+    await api.put(`/orders/${orderId}/status`, { status: newStatus });
+    await fetchAllOrders(currentPage);
+  }
+
+  const fetchMyOrders = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const response = await api.get("/orders/my");
-      setMyOrders(response.data);
+      const response = await api.get("/orders/my", { params: { page } });
+      const orders = Array.isArray(response.data) ? response.data : response.data.orders || [];
+      const pagination = response.data?.pagination || null;
+      setMyOrders(orders);
+      setMyOrdersPagination(pagination);
       setError("");
     } catch (err) {
       setError("Could not load your orders.");
@@ -96,10 +103,26 @@ async function advanceOrderStatus(orderId, newStatus, currentPage = 1) {
   return (
     <OrderContext.Provider
       value={{
-        myOrders, loading, error, fetchMyOrders, placeOrder,
-        availableOrders, myDeliveries, deliveryLoading, deliveryError,
-        fetchDeliveryData, acceptOrder, markDelivered,
-        allOrders, adminOrdersLoading, adminOrdersError, fetchAllOrders, advanceOrderStatus, removeAvailableOrderLocally
+        myOrders,
+        myOrdersPagination,
+        loading,
+        error,
+        fetchMyOrders,
+        placeOrder,
+        availableOrders,
+        myDeliveries,
+        deliveryLoading,
+        deliveryError,
+        fetchDeliveryData,
+        acceptOrder,
+        markDelivered,
+        allOrders,
+        allOrdersPagination,
+        adminOrdersLoading,
+        adminOrdersError,
+        fetchAllOrders,
+        advanceOrderStatus,
+        removeAvailableOrderLocally,
       }}
     >
       {children}
