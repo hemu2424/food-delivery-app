@@ -7,15 +7,13 @@ import { getPaginationParams } from "../utils/paginate.js";
 
 async function createOrder(req, res, next) {
   try {
-    const { restaurant, items, deliveryAddress } = req.body;
-
+    const { restaurant, items, deliveryAddress, latitude, longitude } = req.body;
 
     let totalAmount = 0;
     const orderItems = [];
 
     for (const cartItem of items) {
       const menuItem = await MenuItems.findById(cartItem.menuItem);
-
       if (!menuItem) {
         return res.status(404).json({ message: `Menu item not found: ${cartItem.menuItem}` });
       }
@@ -24,11 +22,10 @@ async function createOrder(req, res, next) {
       }
 
       totalAmount += menuItem.price * cartItem.quantity;
-
       orderItems.push({
         menuItem: menuItem._id,
-        name: menuItem.name,   
-        price: menuItem.price, 
+        name: menuItem.name,
+        price: menuItem.price,
         quantity: cartItem.quantity,
       });
     }
@@ -39,6 +36,10 @@ async function createOrder(req, res, next) {
       items: orderItems,
       totalAmount,
       deliveryAddress,
+      deliveryLocation: {
+        type: "Point",
+        coordinates: [longitude, latitude], 
+      },
     });
 
     res.status(201).json(order);

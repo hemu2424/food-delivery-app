@@ -59,11 +59,23 @@ const orderSchema = new mongoose.Schema(
       enum: ["cod"], 
       default: "cod",
     },
+        deliveryLocation: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], 
+        required: true,
+      },
+    },
   },
   { timestamps: true }
 );
 orderSchema.index({ user: 1 });
 orderSchema.index({ deliveryPartner: 1, status: 1 }); 
+orderSchema.index({ deliveryLocation: "2dsphere" });
 
 const Order =  mongoose.model("Order", orderSchema);
 export default Order
