@@ -1,50 +1,46 @@
 services:
-  mongo:
-    image: mongo:7
-    container_name: food-delivery-mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
     container_name: food-delivery-backend
+
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
+
     ports:
       - "5000:5000"
-    depends_on:
-      mongo:
-        condition: service_healthy
+
     environment:
+      MONGO_URI: ${MONGO_URI}
+      JWT_SECRET: ${JWT_SECRET}
       PORT: 5000
       NODE_ENV: production
-      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/restaurant}
-      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
-
+      CLIENT_URL: ${CLIENT_URL}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
 
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+
     container_name: food-delivery-frontend
+
     restart: unless-stopped
-    tty: true
+
     ports:
       - "3000:3000"
+
     depends_on:
       - backend
-    environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
 
-volumes:
-  mongo-data:
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}

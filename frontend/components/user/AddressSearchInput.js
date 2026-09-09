@@ -4,13 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { useAddresses } from "@/context/AddressContext";
 
 export default function AddressSearchInput({ onSelect }) {
-  const { searchAddresses } = useAddresses();
+  const { searchAddresses, getPlaceDetails } = useAddresses();
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
+  const [suggestions, setSuggestions] = useState([]); // now [{ placeId, description }]
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef(null);
-        
+
   useEffect(() => {
     if (query.trim().length < 3) {
       setSuggestions([]);
@@ -28,7 +29,6 @@ export default function AddressSearchInput({ onSelect }) {
     return () => clearTimeout(timeoutId);
   }, [query, searchAddresses]);
 
-
   useEffect(() => {
     function handleClickOutside(e) {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -39,10 +39,23 @@ export default function AddressSearchInput({ onSelect }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  function handleSelect(suggestion) {
-    setQuery(suggestion.formattedAddress);
+  // THIS is the second API call — fired only when the user actually clicks a suggestion,
+  // not for every prediction shown in the dropdown.
+  async function handleSelect(suggestion) {
+    setQuery(suggestion.description);
     setShowDropdown(false);
-    onSelect(suggestion);
+    setIsLoadingDetails(true);
+
+    const details = await getPlaceDetails(suggestion.placeId);
+
+    setIsLoadingDetails(false);
+
+    if (!details) {
+      // Could show an inline error here — keeping it simple for now
+      return;
+    }
+
+    onSelect(details);
   }
 
   return (
@@ -56,20 +69,22 @@ export default function AddressSearchInput({ onSelect }) {
         className="w-full border rounded-md px-3 py-2 text-sm"
       />
 
-      {isSearching && (
-        <p className="text-xs text-gray-400 mt-1">Searching...</p>
+      {(isSearching || isLoadingDetails) && (
+        <p className="text-xs text-gray-400 mt-1">
+          {isLoadingDetails ? "Loading location..." : "Searching..."}
+        </p>
       )}
 
       {showDropdown && suggestions.length > 0 && (
         <div className="absolute z-20 w-full bg-white border rounded-md shadow-lg mt-1 max-h-64 overflow-y-auto">
-          {suggestions.map((suggestion, index) => (
+          {suggestions.map((suggestion) => (
             <button
-              key={index}
+              key={suggestion.placeId}
               type="button"
               onClick={() => handleSelect(suggestion)}
               className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-b-0"
             >
-              {suggestion.formattedAddress}
+              {suggestion.description}
             </button>
           ))}
         </div>

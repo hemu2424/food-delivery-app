@@ -53,10 +53,19 @@ async function updateAddress(id, addressData) {
   await fetchAddresses();
   return response.data;
 }
+async function searchAddresses(query) {
+  const response = await api.get(`/addresses/search?query=${encodeURIComponent(query)}`);
+  return response.data; // now returns [{ placeId, description }], not full details
+}
+
+async function getPlaceDetails(placeId) {
+  const response = await api.get(`/addresses/place-details?placeId=${placeId}`);
+  return response.data; // full { formattedAddress, latitude, longitude, city, ... }
+}
 
   return (
     <AddressContext.Provider
-      value={{ addresses, loading, error, fetchAddresses, createAddress, deleteAddress, setDefaultAddress, searchAddresses ,reverseGeocode,updateAddress}}
+      value={{ addresses, loading, error, fetchAddresses, createAddress, deleteAddress, setDefaultAddress, searchAddresses ,reverseGeocode,updateAddress,getPlaceDetails}}
     >
       {children}
     </AddressContext.Provider>

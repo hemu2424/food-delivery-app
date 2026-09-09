@@ -1,5 +1,6 @@
 import Address from "../models/Address.js";
-import reverseGeocode from "../utils/reversegeocode.js";
+import getPlaceDetails from "../utils/getPlaceDetails.js";
+import reverseGeocode from "../utils/reverseGeocode.js";
 import searchAddress from "../utils/searchAddress.js";
 
 
@@ -132,5 +133,22 @@ async function reverseGeocodeLocation(req, res, next) {
     next(error);
   }
 }
+async function getPlaceDetailsEndpoint(req, res, next) {
+  try {
+    const { placeId } = req.query;
+    if (!placeId) {
+      return res.status(400).json({ message: "placeId is required" });
+    }
 
-export { getMyAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress ,searchAddressSuggestions,reverseGeocodeLocation};
+    const details = await getPlaceDetails(placeId);
+    if (!details) {
+      return res.status(404).json({ message: "Could not fetch location details" });
+    }
+
+    res.json(details);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export { getMyAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress ,searchAddressSuggestions,reverseGeocodeLocation,getPlaceDetailsEndpoint};

@@ -6,31 +6,20 @@ async function geocodeAddress(address) {
 
   try {
     const encodedAddress = encodeURIComponent(address);
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodedAddress}&format=json&limit=1`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
 
-    const response = await fetch(url, {
-      headers: {
-       
-        "User-Agent": "FoodExpressApp/1.0 (learning project)",
-      },
-    });
+    const response = await fetch(url);
+    const data = await response.json();
 
-    if (!response.ok) {
-      console.error("Geocoding request failed:", response.status);
+    if (data.status !== "OK" || !data.results || data.results.length === 0) {
       return null;
     }
 
-    const results = await response.json();
-
-    if (!results || results.length === 0) {
-      return null; 
-    }
-
-    const { lat, lon } = results[0];
+    const location = data.results[0].geometry.location; 
 
     return {
-      latitude: parseFloat(lat),
-      longitude: parseFloat(lon),
+      latitude: location.lat,
+      longitude: location.lng,
     };
   } catch (error) {
     console.error("Geocoding error:", error.message);
