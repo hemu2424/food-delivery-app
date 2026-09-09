@@ -4,25 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
 import { useOrders } from "@/context/OrderContext";
-import { useToast } from "@/context/ToastContext";
+import CheckoutAddressPicker from "@/components/user/CheckoutAddressPicker";
 
 export default function CheckoutPage() {
   const { cart, totalAmount, clearCart } = useCart();
   const { placeOrder } = useOrders();
-  const { user } = useAuth();
   const router = useRouter();
 
-  const [address, setAddress] = useState(user?.address || "");
+  const [finalizedAddress, setFinalizedAddress] = useState(null); 
   const [error, setError] = useState("");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-    const {showToast} = useToast()
-
 
   async function handlePlaceOrder() {
-    if (!address.trim()) {
-      setError("Please enter a delivery address.");
+    if (!finalizedAddress) {
+      setError("Please select a delivery address first.");
       return;
     }
 
@@ -30,7 +26,6 @@ export default function CheckoutPage() {
     setIsPlacingOrder(true);
 
     try {
- 
       const orderItems = cart.items.map((item) => ({
         menuItem: item.menuItem,
         quantity: item.quantity,
@@ -38,15 +33,16 @@ export default function CheckoutPage() {
 
       const order = await placeOrder({
         restaurantId: cart.restaurantId,
-        deliveryAddress: address,
+        deliveryAddress: finalizedAddress.formattedAddress,
+        latitude: finalizedAddress.latitude,
+        longitude: finalizedAddress.longitude,
         items: orderItems,
       });
 
       clearCart();
-      router.push(`/user/orders/${order._id}`); 
+      router.push(`/user/orders/${order._id}`);
     } catch (err) {
       setError(err.response?.data?.message || "Could not place order. Please try again.");
-      //  showToast(message, "error");
     } finally {
       setIsPlacingOrder(false);
     }
@@ -64,7 +60,7 @@ export default function CheckoutPage() {
     <ProtectedRoute allowedRoles={["user"]}>
       <h1 className="text-2xl font-bold mb-6">Checkout</h1>
 
-      <div className="max-w-lg">
+      <div className="max-w-lg mx-auto">
         <p className="text-sm text-gray-500 mb-2">Ordering from: {cart.restaurantName}</p>
 
         <div className="bg-white border rounded-lg p-4 mb-4">
@@ -80,14 +76,24 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <label className="block text-sm font-medium mb-1">Delivery Address</label>
-        <textarea
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          rows={2}
-          className="w-full border rounded-md px-3 py-2 mb-2"
-          placeholder="Enter your full delivery address"
-        />
+        <h2 className="text-sm font-semibold mb-3">Delivery Address</h2>
+
+        {!finalizedAddress && (
+          <CheckoutAddressPicker onFinalize={setFinalizedAddress} />
+        )}
+
+        {finalizedAddress && (
+          <div className="bg-gray-50 border rounded-lg p-3 mb-4">
+            <p className="text-xs text-gray-500 mb-1">Delivering to</p>
+            <p className="text-sm">{finalizedAddress.formattedAddress}</p>
+            <button
+              onClick={() => setFinalizedAddress(null)}
+              className="text-xs text-orange-600 hover:underline mt-1"
+            >
+              Change address
+            </button>
+          </div>
+        )}
 
         <p className="text-xs text-gray-400 mb-4">Payment: Cash on Delivery</p>
 
@@ -95,7 +101,7 @@ export default function CheckoutPage() {
 
         <button
           onClick={handlePlaceOrder}
-          disabled={isPlacingOrder}
+          disabled={isPlacingOrder || !finalizedAddress}
           className="w-full bg-orange-600 text-white py-3 rounded-md hover:bg-orange-700 disabled:opacity-50"
         >
           {isPlacingOrder ? "Placing order..." : "Place Order"}

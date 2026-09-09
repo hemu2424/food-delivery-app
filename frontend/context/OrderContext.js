@@ -100,9 +100,21 @@ export function OrderProvider({ children }) {
     await fetchDeliveryData();
   }
 
+  async function placeOrder(cartData) {
+  const response = await api.post("/orders", {
+    restaurant: cartData.restaurantId,
+    deliveryAddress: cartData.deliveryAddress,
+    latitude: cartData.latitude,
+    longitude: cartData.longitude,
+    items: cartData.items,
+  });
+  return response.data;
+}
+
   return (
     <OrderContext.Provider
       value={{
+        placeOrder,
         myOrders,
         myOrdersPagination,
         loading,

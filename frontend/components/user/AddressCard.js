@@ -1,6 +1,6 @@
 "use client";
 
-export default function AddressCard({ address, onSelect, onDelete, onSetDefault, selectable }) {
+export default function AddressCard({ address, onSelect, onEdit, onDelete, onSetDefault, selectable }) {
   return (
     <div
       onClick={selectable ? () => onSelect(address) : undefined}
@@ -17,6 +17,9 @@ export default function AddressCard({ address, onSelect, onDelete, onSetDefault,
 
       {!selectable && (
         <div className="flex gap-3 mt-2 text-sm">
+          <button onClick={() => onEdit(address)} className="text-blue-600 hover:underline">
+            Edit
+          </button>
           {!address.isDefault && (
             <button onClick={() => onSetDefault(address._id)} className="text-orange-600 hover:underline">
               Set as default

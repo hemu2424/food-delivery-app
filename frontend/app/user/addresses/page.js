@@ -5,10 +5,12 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAddresses } from "@/context/AddressContext";
 import AddressCard from "@/components/user/AddressCard";
 import AddAddressFlow from "@/components/user/AddAddressFlow";
+import EditAddressForm from "@/components/user/EditAddressForm";
 
 export default function AddressesPage() {
   const { addresses, loading, fetchAddresses, deleteAddress, setDefaultAddress } = useAddresses();
   const [showAddFlow, setShowAddFlow] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null); // the address object currently being edited, or null
 
   useEffect(() => {
     fetchAddresses();
@@ -24,18 +26,17 @@ export default function AddressesPage() {
       <div className="max-w-lg mx-auto">
         <h1 className="text-2xl font-bold mb-6">Saved Addresses</h1>
 
-        {!showAddFlow && (
+        {!showAddFlow && !editingAddress && (
           <>
             {loading && <p className="text-gray-400">Loading...</p>}
-            {!loading && addresses.length === 0 && (
-              <p className="text-gray-400 mb-4">No saved addresses yet.</p>
-            )}
+            {!loading && addresses.length === 0 && <p className="text-gray-400 mb-4">No saved addresses yet.</p>}
 
             <div className="space-y-3 mb-4">
               {addresses.map((address) => (
                 <AddressCard
                   key={address._id}
                   address={address}
+                  onEdit={setEditingAddress}
                   onDelete={handleDelete}
                   onSetDefault={setDefaultAddress}
                 />
@@ -52,9 +53,14 @@ export default function AddressesPage() {
         )}
 
         {showAddFlow && (
-          <AddAddressFlow
-            onSuccess={() => setShowAddFlow(false)}
-            onCancel={() => setShowAddFlow(false)}
+          <AddAddressFlow onSuccess={() => setShowAddFlow(false)} onCancel={() => setShowAddFlow(false)} />
+        )}
+
+        {editingAddress && (
+          <EditAddressForm
+            address={editingAddress}
+            onSuccess={() => setEditingAddress(null)}
+            onCancel={() => setEditingAddress(null)}
           />
         )}
       </div>

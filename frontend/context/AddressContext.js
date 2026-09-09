@@ -48,10 +48,15 @@ export function AddressProvider({ children }) {
   const response = await api.get(`/addresses/reverse-geocode?lat=${latitude}&lng=${longitude}`);
   return response.data;
 }
+async function updateAddress(id, addressData) {
+  const response = await api.put(`/addresses/${id}`, addressData);
+  await fetchAddresses();
+  return response.data;
+}
 
   return (
     <AddressContext.Provider
-      value={{ addresses, loading, error, fetchAddresses, createAddress, deleteAddress, setDefaultAddress, searchAddresses ,reverseGeocode}}
+      value={{ addresses, loading, error, fetchAddresses, createAddress, deleteAddress, setDefaultAddress, searchAddresses ,reverseGeocode,updateAddress}}
     >
       {children}
     </AddressContext.Provider>
