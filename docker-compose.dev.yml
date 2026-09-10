@@ -28,17 +28,25 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+
     container_name: food-delivery-frontend-dev
+
     restart: unless-stopped
+
     tty: true
+
     ports:
       - "3000:3000"
+
     depends_on:
       - backend
+
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING_INTERVAL: "1000"
+
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      - /app/.next
