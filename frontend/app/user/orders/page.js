@@ -22,7 +22,7 @@ export default function MyOrdersPage() {
       {loading && <p className="text-gray-400">Loading orders...</p>}
       {error && <p className="text-red-600">{error}</p>}
       {!loading && myOrders.length === 0 && (
-        <p className="text-gray-400">You haven't placed any orders yet.</p>
+        <p className="text-gray-400">You haven&apos;t placed any orders yet.</p>
       )}
 
       <div className="space-y-3 max-w-lg">

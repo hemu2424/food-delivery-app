@@ -15,7 +15,7 @@ export function CartProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (cart) {
+    if (cart !== null) {
       localStorage.setItem("cart", JSON.stringify(cart));
     } else {
       localStorage.removeItem("cart");

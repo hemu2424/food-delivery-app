@@ -38,7 +38,7 @@ export function SocketProvider({ children }) {
     return () => {
       newSocket.disconnect();
     };
-  }, [user]);
+  }, [user, showToast]);
 
   return <SocketContext.Provider value={{ socket }}>{children}</SocketContext.Provider>;
 }

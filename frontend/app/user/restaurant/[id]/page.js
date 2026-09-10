@@ -38,7 +38,7 @@ export default function RestaurantDetailPage() {
           </div>
 
           {menuItems.length === 0 && (
-            <p className="text-gray-400">This restaurant hasn't added any menu items yet.</p>
+            <p className="text-gray-400">This restaurant hasn&apos;t added any menu items yet.</p>
           )}
 
           {categories.map((category) => (

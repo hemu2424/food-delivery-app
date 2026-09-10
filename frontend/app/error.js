@@ -1,6 +1,7 @@
 "use client"; // error.js MUST be a client component — Next.js requires this
 
 import { useEffect } from "react";
+import Link from "next/link";
 
 export default function GlobalError({ error, reset }) {
   useEffect(() => {
@@ -21,9 +22,9 @@ export default function GlobalError({ error, reset }) {
         >
           Try again
         </button>
-        <a href="/" className="border px-4 py-2 rounded-md hover:bg-gray-50">
+        <Link href="/" className="border px-4 py-2 rounded-md hover:bg-gray-50">
           Go home
-        </a>
+        </Link>
       </div>
     </div>
   );
