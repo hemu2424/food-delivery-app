@@ -14,7 +14,6 @@ export default function AddressSearchInput({ onSelect }) {
 
   useEffect(() => {
     if (query.trim().length < 3) {
-      setSuggestions([]);
       return;
     }
 
@@ -64,8 +63,15 @@ export default function AddressSearchInput({ onSelect }) {
         type="text"
         placeholder="Search area, street, locality..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+        onChange={(e) => {
+          const nextQuery = e.target.value;
+          setQuery(nextQuery);
+          if (nextQuery.trim().length < 3) {
+            setSuggestions([]);
+            setShowDropdown(false);
+          }
+        }}
+        onFocus={() => query.trim().length >= 3 && suggestions.length > 0 && setShowDropdown(true)}
         className="w-full border rounded-md px-3 py-2 text-sm"
       />
 
@@ -75,7 +81,7 @@ export default function AddressSearchInput({ onSelect }) {
         </p>
       )}
 
-      {showDropdown && suggestions.length > 0 && (
+      {query.trim().length >= 3 && showDropdown && suggestions.length > 0 && (
         <div className="absolute z-20 w-full bg-white border rounded-md shadow-lg mt-1 max-h-64 overflow-y-auto">
           {suggestions.map((suggestion) => (
             <button
