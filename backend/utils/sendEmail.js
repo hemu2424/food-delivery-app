@@ -3,12 +3,12 @@ import nodemailer from "nodemailer";
 async function sendEmail({ to, subject, html }) {
 
   const transporter = nodemailer.createTransport({
-    host: "://gmail.com",
-    port: 587,
-    secure: false, 
+    host: "smtp.gmail.com", // Fixed: Changed from "://gmail.com"
+    port: 465,               // Fixed: Port 465 is recommended for secure Gmail SMTP
+    secure: true,            // Fixed: Set to true for port 465
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD, 
+      user: process.env.EMAIL_USER,     // Should be hporiya06@gmail.com in your .env file
+      pass: process.env.EMAIL_PASSWORD, // Must be a 16-digit Google App Password
     },
   });
 
