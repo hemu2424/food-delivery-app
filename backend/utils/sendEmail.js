@@ -4,12 +4,12 @@ async function sendEmail({ to, subject, html }) {
 
   const transporter = nodemailer.createTransport({
     // Hardcoded Google SMTP IPv4 address to completely bypass DNS IPv6 resolution
-    host: "74.125.195.108", 
-    port: 465,               
+    host: "smtp.gmail.com", 
+    port: 587,               
     secure: true,            
     auth: {
       user: process.env.EMAIL_USER,     
-      process: process.env.EMAIL_PASSWORD, 
+      pass: process.env.EMAIL_PASSWORD, 
     },
     tls: {
       // CRITICAL: Tells the SSL connection to expect Gmail's certificate, 
