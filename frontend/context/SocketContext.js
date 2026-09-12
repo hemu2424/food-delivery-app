@@ -22,7 +22,6 @@ export function SocketProvider({ children }) {
 
   useEffect(() => {
     if (!user) {
-      setSocket(null);
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -34,22 +33,29 @@ export function SocketProvider({ children }) {
     const newSocket = io(socketUrl, { withCredentials: true, autoConnect: true });
     socketRef.current = newSocket;
 
-    newSocket.on("connect_error", (err) => console.error("Socket connection error:", err.message));
-    newSocket.on("connect", () => setSocket(newSocket));
+    const handleConnectError = (err) => {
+      console.error("Socket connection error:", err.message);
+    };
+
+    const handleConnect = () => {
+      setSocket(newSocket);
+    };
+
+    newSocket.on("connect_error", handleConnectError);
+    newSocket.on("connect", handleConnect);
 
     if (user.role === "user") {
       newSocket.on("order:statusUpdated", showOrderStatusToast);
     }
 
     return () => {
-      newSocket.off("connect");
-      newSocket.off("connect_error");
+      newSocket.off("connect", handleConnect);
+      newSocket.off("connect_error", handleConnectError);
       newSocket.off("order:statusUpdated", showOrderStatusToast);
       newSocket.disconnect();
       if (socketRef.current === newSocket) {
         socketRef.current = null;
       }
-      setSocket(null);
     };
   }, [user, showOrderStatusToast]);
 

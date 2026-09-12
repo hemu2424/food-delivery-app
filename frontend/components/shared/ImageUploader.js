@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useToast } from "@/context/ToastContext";
 import { useState } from "react";
 
@@ -52,9 +53,12 @@ export default function ImageUploader({ label = "Images", maxCount = 5, onChange
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-3">
           {previews.map((preview, index) => (
             <div key={index} className="relative overflow-hidden rounded-md bg-gray-50">
-              <img
+              <Image
                 src={preview.url}
                 alt="preview"
+                width={96}
+                height={96}
+                unoptimized
                 className="w-full h-24 object-cover transition-transform transform hover:scale-105"
               />
               <button

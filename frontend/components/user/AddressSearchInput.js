@@ -26,7 +26,7 @@ export default function AddressSearchInput({ onSelect }) {
     }, 400);
 
     return () => clearTimeout(timeoutId);
-  }, [query]);
+  }, [query, searchAddresses]);
 
   useEffect(() => {
     function handleClickOutside(e) {

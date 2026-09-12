@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 export default function AvatarUploader({ currentAvatar, onChange }) {
@@ -15,9 +16,9 @@ export default function AvatarUploader({ currentAvatar, onChange }) {
 
   return (
     <div className="flex items-center gap-4">
-      <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+      <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center relative">
         {preview ? (
-          <img src={preview} alt="Avatar preview" className="w-full h-full object-cover" />
+          <Image src={preview} alt="Avatar preview" fill unoptimized className="object-cover" />
         ) : (
           <span className="text-gray-400 text-xs">No photo</span>
         )}

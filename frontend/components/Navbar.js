@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
@@ -71,7 +72,14 @@ export default function Navbar() {
             {user && (
               <Link href="/profile" className="hover:text-primary flex items-center gap-1">
                 {user.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
+                  <Image
+                    src={user.avatar}
+                    alt={user.name || "User avatar"}
+                    width={24}
+                    height={24}
+                    unoptimized
+                    className="w-6 h-6 rounded-full object-cover"
+                  />
                 ) : (
                   <span className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs">
                     {user.name?.[0]?.toUpperCase()}
