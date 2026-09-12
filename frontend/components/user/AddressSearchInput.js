@@ -26,7 +26,7 @@ export default function AddressSearchInput({ onSelect }) {
     }, 400);
 
     return () => clearTimeout(timeoutId);
-  }, [query, searchAddresses]);
+  }, [query]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -38,8 +38,6 @@ export default function AddressSearchInput({ onSelect }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // THIS is the second API call — fired only when the user actually clicks a suggestion,
-  // not for every prediction shown in the dropdown.
   async function handleSelect(suggestion) {
     setQuery(suggestion.description);
     setShowDropdown(false);

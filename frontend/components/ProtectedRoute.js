@@ -12,12 +12,16 @@ export default function ProtectedRoute({children,allowedRoles}){
         if (loading) return;
 
         if (!user) {
-            router.push("/login");
+            if (window.location.pathname !== "/login") {
+                router.replace("/login");
+            }
             return;
         }
 
         if (allowedRoles && !allowedRoles.includes(user.role)) {
-            router.push("/");
+            if (window.location.pathname !== "/") {
+                router.replace("/");
+            }
             return;
         }
     }, [user, loading, allowedRoles, router]);

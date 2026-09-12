@@ -30,33 +30,31 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-      <html lang="en">
+    <html lang="en">
       <body>
-  <ToastProvider>
-    <AuthProvider>
-      <AddressProvider>
-      <LocationProvider>
-        <SocketProvider>
-          <AddressProvider>
-            <CartProvider>
-              <OrderProvider>
-                <RestaurantProvider>
-                  <MenuItemProvider>
-                    <AdminProvider>
-                      <Navbar />
-                      {children}
-                    </AdminProvider>
-                  </MenuItemProvider>
-                </RestaurantProvider>
-              </OrderProvider>
-            </CartProvider>
-          </AddressProvider>
-        </SocketProvider>
-      </LocationProvider>
-      </AddressProvider>
-    </AuthProvider>
-  </ToastProvider>
-</body>
+        <ToastProvider>
+          <AuthProvider>
+            <AddressProvider>
+              <LocationProvider>
+                <SocketProvider>
+                  <CartProvider>
+                    <OrderProvider>
+                      <RestaurantProvider>
+                        <MenuItemProvider>
+                          <AdminProvider>
+                            <Navbar />
+                            {children}
+                          </AdminProvider>
+                        </MenuItemProvider>
+                      </RestaurantProvider>
+                    </OrderProvider>
+                  </CartProvider>
+                </SocketProvider>
+              </LocationProvider>
+            </AddressProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </body>
     </html>
   );
 }

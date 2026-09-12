@@ -2,36 +2,45 @@
 
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({children}){
     const [user,setUser] = useState(null);
-    const[loading,setLoading] = useState(true);
-    const router = useRouter()
+    const [loading,setLoading] = useState(true);
+    const router = useRouter();
+    const hasCheckedAuth = useRef(false);
 
+    useEffect(() => {
+        if (hasCheckedAuth.current) return;
+        hasCheckedAuth.current = true;
 
+        let isActive = true;
 
-    useEffect(()=>{
-        async function checkAuth(){
-            try{
-                const response = await api.get("/auth/me")
-                
-                setUser(response.data.user ?? response.data);
-
-            }
-            catch(error){
-
-                setUser(null);
-            }
-            finally{
-                setLoading(false)
+        async function checkAuth() {
+            try {
+                const response = await api.get("/auth/me");
+                if (isActive) {
+                  setUser(response.data.user ?? response.data);
+                }
+            } catch (error) {
+                if (isActive) {
+                  setUser(null);
+                }
+            } finally {
+                if (isActive) {
+                  setLoading(false);
+                }
             }
         }
-        checkAuth()
 
-    },[])
+        checkAuth();
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
 
 
   async function login(email, password) {
@@ -71,14 +80,20 @@ export function AuthProvider({children}){
   async function logout() {
     await api.post("/auth/logout"); 
     setUser(null);
-    router.push("/login");
+    router.replace("/login");
   }
 
 function redirectByRole(role){
-  if(role === "admin"){ router.push("/admin/dashboard"); }
-  else if(role === "delivery") { router.push("/delivery/dashboard"); }
-  else { router.push("/user/dashboard"); }
+  const target = role === "admin"
+    ? "/admin/dashboard"
+    : role === "delivery"
+      ? "/delivery/dashboard"
+      : "/user/dashboard";
 
+  const currentPath = window.location.pathname;
+  if (currentPath !== target) {
+    router.replace(target);
+  }
 }
 
 async function forgotPassword(email) {
