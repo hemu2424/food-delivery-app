@@ -9,6 +9,16 @@ const api = axios.create({
   withCredentials: true,
 });
 
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
 export function getInvoiceUrl(orderId) {
   return `${defaultApiBase}/orders/${orderId}/invoice`;
 }

@@ -22,10 +22,18 @@ const app = express();
 app.set("etag", false);
 registerEmailListeners();
 const clientUrls = process.env.CLIENT_URLS || "http://localhost:3000,http://localhost:3001,http://localhost:3002";
-const allowedOrigins = clientUrls.split(",").map((url) => url.trim());
+const allowedOrigins = clientUrls.split(",").map((url) => url.trim().replace(/\/$/, ""));
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    const formattedOrigin = origin.replace(/\/$/, "");
+    if (allowedOrigins.includes(formattedOrigin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
 }));
 

@@ -19,7 +19,7 @@ function generateToken(user) {
 
 
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
 
 function setTokenCookie(res, token) {
   res.cookie("token", token, {
@@ -130,6 +130,7 @@ async function verifyEmail(req, res, next) {
         isApproved: user.isApproved,
         isEmailVerified: user.isEmailVerified,
       },
+      token: token,
     });
   } catch (error) {
     next(error);

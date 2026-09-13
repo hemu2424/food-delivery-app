@@ -30,7 +30,12 @@ export function SocketProvider({ children }) {
     }
 
     const socketUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
-    const newSocket = io(socketUrl, { withCredentials: true, autoConnect: true });
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const newSocket = io(socketUrl, {
+      withCredentials: true,
+      autoConnect: true,
+      auth: { token },
+    });
     socketRef.current = newSocket;
 
     const handleConnectError = (err) => {

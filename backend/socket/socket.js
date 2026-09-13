@@ -21,10 +21,14 @@ function initSocket(io) {
 
  io.use(async (socket, next) => {
   try {
-    console.log("1")
     const rawCookies = socket.handshake.headers.cookie;
-    const token = parseTokenFromCookieHeader(rawCookies);
-    console.log("2")
+    let token = parseTokenFromCookieHeader(rawCookies);
+    if (!token && socket.handshake.auth?.token) {
+      token = socket.handshake.auth.token;
+    }
+    if (!token && socket.handshake.headers?.authorization && socket.handshake.headers.authorization.startsWith("Bearer ")) {
+      token = socket.handshake.headers.authorization.split(" ")[1];
+    }
 
     if (!token) {
       return next(new Error("Not authorized — no token found"));
