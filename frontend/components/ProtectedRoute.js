@@ -29,7 +29,7 @@ export default function ProtectedRoute({children,allowedRoles}){
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64 text-gray-400">
-                Loading...
+                Loading from protected route
             </div>
         );
     }

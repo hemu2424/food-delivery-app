@@ -19,6 +19,7 @@ import { initSocket } from "./socket/socket.js"
 connectDB();
 
 const app = express();
+app.set("etag", false);
 registerEmailListeners();
 const clientUrls = process.env.CLIENT_URLS || "http://localhost:3000,http://localhost:3001,http://localhost:3002";
 const allowedOrigins = clientUrls.split(",").map((url) => url.trim());

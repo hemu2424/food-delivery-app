@@ -19,31 +19,23 @@ function generateToken(user) {
 
 
 
+const isProduction = process.env.NODE_ENV === "production";
+
 function setTokenCookie(res, token) {
   res.cookie("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-
-    sameSite:
-      process.env.NODE_ENV === "production"
-        ? "none"
-        : "lax",
-
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
+    path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
-
 const COOKIE_OPTIONS = {
   httpOnly: true,
-
-  secure:
-    process.env.NODE_ENV === "production",
-
-  sameSite:
-    process.env.NODE_ENV === "production"
-      ? "none"
-      : "lax",
+  sameSite: isProduction ? "none" : "lax",
+  secure: isProduction,
+  path: "/",
 };
 
 
@@ -238,6 +230,7 @@ async function login (req,res,next){
 
 async function getProfile(req, res, next) {
   try {
+    res.set("Cache-Control", "no-store");
     res.json(req.user);
   } catch (error) {
     next(error);

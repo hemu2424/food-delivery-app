@@ -39,33 +39,42 @@ export function AddressProvider({ children }) {
     await fetchAddresses();
   }
 
-
   async function searchAddresses(query) {
     const response = await api.get(`/addresses/search?query=${encodeURIComponent(query)}`);
     return response.data;
   }
-  async function reverseGeocode(latitude, longitude) {
-  const response = await api.get(`/addresses/reverse-geocode?lat=${latitude}&lng=${longitude}`);
-  return response.data;
-}
-async function updateAddress(id, addressData) {
-  const response = await api.put(`/addresses/${id}`, addressData);
-  await fetchAddresses();
-  return response.data;
-}
-async function searchAddresses(query) {
-  const response = await api.get(`/addresses/search?query=${encodeURIComponent(query)}`);
-  return response.data; // now returns [{ placeId, description }], not full details
-}
 
-async function getPlaceDetails(placeId) {
-  const response = await api.get(`/addresses/place-details?placeId=${placeId}`);
-  return response.data; // full { formattedAddress, latitude, longitude, city, ... }
-}
+  async function reverseGeocode(latitude, longitude) {
+    const response = await api.get(`/addresses/reverse-geocode?lat=${latitude}&lng=${longitude}`);
+    return response.data;
+  }
+
+  async function updateAddress(id, addressData) {
+    const response = await api.put(`/addresses/${id}`, addressData);
+    await fetchAddresses();
+    return response.data;
+  }
+
+  async function getPlaceDetails(placeId) {
+    const response = await api.get(`/addresses/place-details?placeId=${placeId}`);
+    return response.data;
+  }
 
   return (
     <AddressContext.Provider
-      value={{ addresses, loading, error, fetchAddresses, createAddress, deleteAddress, setDefaultAddress, searchAddresses ,reverseGeocode,updateAddress,getPlaceDetails}}
+      value={{
+        addresses,
+        loading,
+        error,
+        fetchAddresses,
+        createAddress,
+        deleteAddress,
+        setDefaultAddress,
+        searchAddresses,
+        reverseGeocode,
+        updateAddress,
+        getPlaceDetails,
+      }}
     >
       {children}
     </AddressContext.Provider>
