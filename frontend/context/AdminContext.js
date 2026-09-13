@@ -2,31 +2,35 @@
 
 import { createContext, useContext, useState, useCallback } from "react";
 import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const AdminContext = createContext(null);
 
 export function AdminProvider({ children }) {
+  const { user } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [deliveryPartners, setDeliveryPartners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [stats, setStats] = useState(null);
-const [statsLoading, setStatsLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
 
-const fetchStats = useCallback(async () => {
-  setStatsLoading(true);
-  try {
-    const response = await api.get("/admin/stats");
-    setStats(response.data);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setStatsLoading(false);
-  }
-}, []);
+  const fetchStats = useCallback(async () => {
+    if (!user || user.role !== "admin") return;
+    setStatsLoading(true);
+    try {
+      const response = await api.get("/admin/stats");
+      setStats(response.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [user]);
 
   const fetchUsers = useCallback(async () => {
+    if (!user || user.role !== "admin") return;
     setLoading(true);
     try {
       const [customersRes, partnersRes] = await Promise.all([
@@ -37,11 +41,13 @@ const fetchStats = useCallback(async () => {
       setDeliveryPartners(partnersRes.data);
       setError("");
     } catch (err) {
-      setError("Could not load users.");
+      if (err.response?.status !== 401) {
+        setError("Could not load users.");
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   async function toggleBlockUser(userId) {
     await api.put(`/admin/users/${userId}/block`);

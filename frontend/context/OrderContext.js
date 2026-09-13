@@ -2,10 +2,12 @@
 
 import { createContext, useContext, useState, useCallback } from "react";
 import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const OrderContext = createContext(null);
 
 export function OrderProvider({ children }) {
+  const { user } = useAuth();
   const [myOrders, setMyOrders] = useState([]);
   const [myOrdersPagination, setMyOrdersPagination] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -27,6 +29,7 @@ export function OrderProvider({ children }) {
   }
 
   const fetchAllOrders = useCallback(async (page = 1) => {
+    if (!user || user.role !== "admin") return;
     setAdminOrdersLoading(true);
     try {
       const response = await api.get("/orders", { params: { page } });
@@ -36,11 +39,13 @@ export function OrderProvider({ children }) {
       setAllOrdersPagination(pagination);
       setAdminOrdersError("");
     } catch (err) {
-      setAdminOrdersError("Could not load orders.");
+      if (err.response?.status !== 401) {
+        setAdminOrdersError("Could not load orders.");
+      }
     } finally {
       setAdminOrdersLoading(false);
     }
-  }, []);
+  }, [user]);
 
   async function advanceOrderStatus(orderId, newStatus, currentPage = 1) {
     await api.put(`/orders/${orderId}/status`, { status: newStatus });
@@ -48,6 +53,10 @@ export function OrderProvider({ children }) {
   }
 
   const fetchMyOrders = useCallback(async (page = 1) => {
+    if (!user) {
+      setMyOrders([]);
+      return;
+    }
     setLoading(true);
     try {
       const response = await api.get("/orders/my", { params: { page } });
@@ -57,23 +66,16 @@ export function OrderProvider({ children }) {
       setMyOrdersPagination(pagination);
       setError("");
     } catch (err) {
-      setError("Could not load your orders.");
+      if (err.response?.status !== 401) {
+        setError("Could not load your orders.");
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  async function placeOrder(cartData) {
-    const response = await api.post("/orders", {
-      restaurant: cartData.restaurantId,
-      deliveryAddress: cartData.deliveryAddress,
-      items: cartData.items,
-    });
-    return response.data;
-  }
-
+  }, [user]);
 
   const fetchDeliveryData = useCallback(async () => {
+    if (!user || user.role !== "delivery") return;
     setDeliveryLoading(true);
     try {
       const [availableRes, myDeliveriesRes] = await Promise.all([
@@ -84,11 +86,13 @@ export function OrderProvider({ children }) {
       setMyDeliveries(myDeliveriesRes.data);
       setDeliveryError("");
     } catch (err) {
-      setDeliveryError("Could not load delivery data.");
+      if (err.response?.status !== 401) {
+        setDeliveryError("Could not load delivery data.");
+      }
     } finally {
       setDeliveryLoading(false);
     }
-  }, []);
+  }, [user]);
 
   async function acceptOrder(orderId) {
     await api.put(`/orders/${orderId}/accept`);

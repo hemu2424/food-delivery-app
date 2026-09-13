@@ -7,7 +7,7 @@ import OrderStatusBadge from "@/components/user/OrderStatusBadge";
 import Pagination from "@/components/shared/Pagination";
 import { useOrders } from "@/context/OrderContext";
 
-export default function MyOrdersPage() {
+function MyOrdersContent() {
   const { myOrders, myOrdersPagination, loading, error, fetchMyOrders } = useOrders();
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -16,7 +16,7 @@ export default function MyOrdersPage() {
   }, [currentPage, fetchMyOrders]);
 
   return (
-    <ProtectedRoute allowedRoles={["user"]}>
+    <>
       <h1 className="text-2xl font-bold mb-6">My Orders</h1>
 
       {loading && <p className="text-gray-400">Loading orders...</p>}
@@ -42,6 +42,14 @@ export default function MyOrdersPage() {
       </div>
 
       <Pagination pagination={myOrdersPagination} onPageChange={setCurrentPage} />
+    </>
+  );
+}
+
+export default function MyOrdersPage() {
+  return (
+    <ProtectedRoute allowedRoles={["user"]}>
+      <MyOrdersContent />
     </ProtectedRoute>
   );
 }

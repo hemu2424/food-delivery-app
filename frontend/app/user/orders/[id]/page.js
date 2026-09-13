@@ -8,13 +8,12 @@ import { useOrderStatusListener } from "@/hooks/useOrderStatusListener";
 import api, { getInvoiceUrl } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 
-export default function OrderDetailPage() {
+function OrderDetailContent() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-const { showToast } = useToast();
-
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function fetchOrder() {
@@ -30,21 +29,20 @@ const { showToast } = useToast();
     fetchOrder();
   }, [id]);
 
-const handleStatusUpdate = useCallback(
-  (update) => {
-    if (update.orderId === id) {
-      setOrder((prevOrder) => (prevOrder ? { ...prevOrder, status: update.status } : prevOrder));
-      showToast(`Order status updated: ${update.status.replace(/_/g, " ")}`);
-    }
-  },
-  [id, showToast]
-);
+  const handleStatusUpdate = useCallback(
+    (update) => {
+      if (update.orderId === id) {
+        setOrder((prevOrder) => (prevOrder ? { ...prevOrder, status: update.status } : prevOrder));
+        showToast(`Order status updated: ${update.status.replace(/_/g, " ")}`);
+      }
+    },
+    [id, showToast]
+  );
 
   useOrderStatusListener(handleStatusUpdate);
 
-
   return (
-    <ProtectedRoute allowedRoles={["user"]}>
+    <>
       {loading && <p className="text-gray-400">Loading order...</p>}
       {error && <p className="text-red-600">{error}</p>}
 
@@ -71,14 +69,15 @@ const handleStatusUpdate = useCallback(
               <span>₹{order.totalAmount}</span>
             </div>
             {order.status === "delivered" && (
-            <a
-  href={getInvoiceUrl(order._id)}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="inline-block mt-4 text-sm border border-orange-600 text-orange-600 px-4 py-2 rounded-md hover:bg-orange-50"
->
-  Download Invoice
-</a>)}
+              <a
+                href={getInvoiceUrl(order._id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-4 text-sm border border-orange-600 text-orange-600 px-4 py-2 rounded-md hover:bg-orange-50"
+              >
+                Download Invoice
+              </a>
+            )}
           </div>
 
           <p className="text-sm text-gray-500">
@@ -87,6 +86,14 @@ const handleStatusUpdate = useCallback(
           <p className="text-xs text-gray-400 mt-1">Payment: Cash on Delivery</p>
         </div>
       )}
+    </>
+  );
+}
+
+export default function OrderDetailPage() {
+  return (
+    <ProtectedRoute allowedRoles={["user"]}>
+      <OrderDetailContent />
     </ProtectedRoute>
   );
 }

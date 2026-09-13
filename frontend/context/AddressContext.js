@@ -2,26 +2,34 @@
 
 import { createContext, useContext, useState, useCallback } from "react";
 import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const AddressContext = createContext(null);
 
 export function AddressProvider({ children }) {
+  const { user } = useAuth();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const fetchAddresses = useCallback(async () => {
+    if (!user) {
+      setAddresses([]);
+      return;
+    }
     setLoading(true);
     try {
       const response = await api.get("/addresses");
       setAddresses(response.data);
       setError("");
     } catch (err) {
-      setError("Could not load your addresses.");
+      if (err.response?.status !== 401) {
+        setError("Could not load your addresses.");
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   async function createAddress(addressData) {
     const response = await api.post("/addresses", addressData);
