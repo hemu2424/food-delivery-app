@@ -22,8 +22,10 @@ export function AuthProvider({children}){
                 }
             } catch (error) {
                 if (isActive) {
-                  if (typeof window !== "undefined") {
-                    localStorage.removeItem("token");
+                  if (error.response?.status === 401) {
+                    if (typeof window !== "undefined") {
+                      localStorage.removeItem("token");
+                    }
                   }
                   setUser(null);
                 }

@@ -22,19 +22,21 @@ const app = express();
 app.set("etag", false);
 registerEmailListeners();
 const clientUrls = process.env.CLIENT_URLS || "http://localhost:3000,http://localhost:3001,http://localhost:3002";
-const allowedOrigins = clientUrls.split(",").map((url) => url.trim().replace(/\/$/, ""));
+const allowedOrigins = clientUrls.split(",").map((url) => url.trim().replace(/\/+$/, ""));
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
-    const formattedOrigin = origin.replace(/\/$/, "");
-    if (allowedOrigins.includes(formattedOrigin)) {
+    const formattedOrigin = origin.replace(/\/+$/, "");
+    if (allowedOrigins.includes(formattedOrigin) || allowedOrigins.includes("*") || formattedOrigin.endsWith(".vercel.app")) {
       return callback(null, true);
     }
     return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"],
 }));
 
 app.use(express.json());
