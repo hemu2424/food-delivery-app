@@ -17,28 +17,22 @@ function generateToken(user) {
   );
 }
 
-
-
+// Global cookie options configuration
 const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
-
-function setTokenCookie(res, token) {
-  res.cookie("token", token, {
-    httpOnly: true,
-    sameSite: isProduction ? "none" : "lax",
-    secure: isProduction,
-    path: "/",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-}
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: isProduction ? "none" : "lax",
-  secure: isProduction,
+  secure: isProduction ? true : false,
   path: "/",
 };
 
-
+function setTokenCookie(res, token) {
+  res.cookie("token", token, {
+    ...COOKIE_OPTIONS,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+}
 
 async function register(req, res, next) {
   try {
@@ -56,7 +50,6 @@ async function register(req, res, next) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-  
     const otp = generateOtp();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -72,9 +65,7 @@ async function register(req, res, next) {
       emailOtpExpires: otpExpiry,
     });
 
-
     eventEmitter.emit("user:registered", { email: user.email, name: user.name, otp });
-
 
     res.status(201).json({
       message: "Registration successful. Please check your email for a verification code.",
@@ -111,12 +102,10 @@ async function verifyEmail(req, res, next) {
       return res.status(400).json({ message: "Incorrect verification code" });
     }
 
-  
     user.isEmailVerified = true;
     user.emailOtp = null;
     user.emailOtpExpires = null;
     await user.save();
-
 
     const token = generateToken(user);
     setTokenCookie(res, token);
@@ -163,71 +152,60 @@ async function resendOtp(req, res, next) {
   }
 }
 
+async function login(req, res, next) {
+  try {
+    const { email, password } = req.body;
+    const user = await Users.findOne({ email });
+    
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-async function login (req,res,next){
-    try{
-        const {email,password} = req.body;
-        const user = await Users.findOne({email});
-        if(!user){
-            return res.status(401).json({
-                message:"this user is not existing in database"
-            });
+    if (user.isBlocked) {
+      return res.status(403).json({ message: "This account has been suspended" });
+    }
 
-        }
-        if(user.isBlocked){
-            return res.status(403).json({
-                message:"this user does not exist"
-            })
-        }
-        const isPasswordCorrect = await bcrypt.compare(password, user.password);
-        if (!user.isEmailVerified) {
-  return res.status(403).json({ message: "Please verify your email before logging in", requiresVerification: true, email: user.email });
-}
-        if (!isPasswordCorrect) {
-            return res.status(401).json({
-                message: "Invalid credentials"
-            });
-        }
+    // ALWAYS validate the password before making decisions on account state updates
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-        const token = generateToken(user);
-        setTokenCookie(res, token);
-        res.status(200).json({
-        user:{
-            id:user._id,
-            name:user.name,
-            email:user.email,
-            role:user.role,
-            isApproved:user.isApproved,
+    // Now check if verification is still required
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ 
+        message: "Please verify your email before logging in", 
+        requiresVerification: true, 
+        email: user.email 
+      });
+    }
 
-        },
-        token: token
+    const token = generateToken(user);
+    setTokenCookie(res, token);
+    
+    res.status(200).json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isApproved: user.isApproved,
+      },
+      token: token
     });
-
-    
-    }
-
-    catch(error){
-        next(error)
-
-    }
-
-
-    
+  } catch (error) {
+    next(error);
+  }
 }
 
-    async function logout(req,res,next){
-        try{
-            res.clearCookie("token", COOKIE_OPTIONS);
-            res.status(200).json({
-                message:"u are logged out"
-            })
-
-        }
-        catch(error){
-            next(error)
-        }
-    }
-
+async function logout(req, res, next) {
+  try {
+    res.clearCookie("token", COOKIE_OPTIONS);
+    res.status(200).json({ message: "You are logged out successfully" });
+  } catch (error) {
+    next(error);
+  }
+}
 
 async function getProfile(req, res, next) {
   try {
@@ -241,21 +219,18 @@ async function getProfile(req, res, next) {
 async function forgotPassword(req, res, next) {
   try {
     const { email } = req.body;
-
     const user = await Users.findOne({ email });
-
 
     if (!user) {
       return res.json({ message: "If an account with that email exists, a reset code has been sent." });
     }
-console.log("User found for password reset:", user.email);
+
     const otp = generateOtp();
     user.resetPasswordOtp = hashOtp(otp);
     user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
     eventEmitter.emit("user:passwordResetRequested", { email: user.email, name: user.name, otp });
-    console.log("Password reset requested for:", email, "OTP:", otp);
 
     res.json({ message: "If an account with that email exists, a reset code has been sent." });
   } catch (error) {
@@ -295,6 +270,7 @@ async function resetPassword(req, res, next) {
     next(error);
   }
 }
+
 async function updateProfile(req, res, next) {
   try {
     const { name, phone } = req.body;
@@ -306,7 +282,6 @@ async function updateProfile(req, res, next) {
 
     if (name) user.name = name;
     if (phone !== undefined) user.phone = phone;
-
 
     if (req.file) {
       user.avatar = req.file.path;
@@ -322,30 +297,20 @@ async function updateProfile(req, res, next) {
       phone: user.phone,
       avatar: user.avatar,
       isApproved: user.isApproved,
-      isEmailVerified: user.isEmailVerified,
     });
   } catch (error) {
     next(error);
   }
 }
-async function changePassword(req, res, next) {
-  try {
-    const { currentPassword, newPassword } = req.body;
 
-    const user = await Users.findById(req.user._id);
-    const isCorrect = await bcrypt.compare(currentPassword, user.password);
-    if (!isCorrect) {
-      return res.status(401).json({ message: "Current password is incorrect" });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
-    await user.save();
-
-    res.json({ message: "Password changed successfully" });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export {register,login,logout,getProfile,verifyEmail,resendOtp, forgotPassword, resetPassword,updateProfile,changePassword};
+export {
+  register,
+  verifyEmail,
+  resendOtp,
+  login,
+  logout,
+  getProfile,
+  forgotPassword,
+  resetPassword,
+  updateProfile
+};
