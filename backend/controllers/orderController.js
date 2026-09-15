@@ -3,11 +3,13 @@ import MenuItems from "../models/MenuItems.js";
 import { getIO } from "../socket/socket.js";
 import generateInvoicePdf from "../utils/generateInvoice.js";
 import { getPaginationParams } from "../utils/paginate.js";
+import crypto from "crypto";
 
+import razorpay from "../config/razorpay.js";
 
 async function createOrder(req, res, next) {
   try {
-    const { restaurant, items, deliveryAddress, latitude, longitude } = req.body;
+    const { restaurant, items, deliveryAddress, latitude, longitude, paymentMethod } = req.body;
 
     let totalAmount = 0;
     const orderItems = [];
@@ -20,14 +22,8 @@ async function createOrder(req, res, next) {
       if (!menuItem.isAvailable) {
         return res.status(400).json({ message: `${menuItem.name} is currently unavailable` });
       }
-
       totalAmount += menuItem.price * cartItem.quantity;
-      orderItems.push({
-        menuItem: menuItem._id,
-        name: menuItem.name,
-        price: menuItem.price,
-        quantity: cartItem.quantity,
-      });
+      orderItems.push({ menuItem: menuItem._id, name: menuItem.name, price: menuItem.price, quantity: cartItem.quantity });
     }
 
     const order = await Order.create({
@@ -36,13 +32,34 @@ async function createOrder(req, res, next) {
       items: orderItems,
       totalAmount,
       deliveryAddress,
-      deliveryLocation: {
-        type: "Point",
-        coordinates: [longitude, latitude], 
-      },
+      deliveryLocation: { type: "Point", coordinates: [longitude, latitude] },
+      paymentMethod: paymentMethod || "cod",
     });
 
-    res.status(201).json(order);
+    // COD orders are done here — same as before, nothing extra needed
+    if (order.paymentMethod === "cod") {
+      return res.status(201).json({ order });
+    }
+
+    // Razorpay path: create a Razorpay-side order too, linked to our MongoDB order
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(totalAmount * 100), // Razorpay works in PAISE, not rupees — always multiply by 100
+      currency: "INR",
+      receipt: order._id.toString(), // ties the Razorpay order back to OUR order's ID
+    });
+
+    order.razorpayOrderId = razorpayOrder.id;
+    await order.save();
+
+    res.status(201).json({
+      order,
+      razorpay: {
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        keyId: process.env.RAZORPAY_KEY_ID, // safe to send — this is the PUBLIC key
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -270,7 +287,46 @@ async function acceptOrder(req, res, next) {
   }
 }
 
+async function verifyPayment(req, res, next) {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.razorpayOrderId !== razorpay_order_id) {
+      return res.status(400).json({ message: "Order mismatch" });
+    }
+
+    // THIS is the actual security check. We recompute the expected signature
+    // ourselves, using our SECRET key, and compare it to what the client sent.
+    // If someone tampered with the payment result client-side, this will NOT match.
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
+      order.paymentStatus = "failed";
+      await order.save();
+      return res.status(400).json({ message: "Payment verification failed" });
+    }
+
+    // Signature matches — this payment is genuinely confirmed by Razorpay
+    order.paymentStatus = "paid";
+    order.razorpayPaymentId = razorpay_payment_id;
+    await order.save();
+
+    res.json({ message: "Payment verified successfully", order });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export {
+  verifyPayment,
   createOrder,
   getMyOrders,
   getOrderById,

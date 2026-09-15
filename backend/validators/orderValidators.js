@@ -17,6 +17,12 @@ const createOrderSchema = z.object({
   latitude: z.coerce.number().min(-90).max(90),
   longitude: z.coerce.number().min(-180).max(180),
   items: z.array(orderItemSchema).min(1, "Order must have at least one item"),
+  paymentMethod: z.enum(["cod", "razorpay"]).optional(),
+});
+const verifyPaymentSchema = z.object({
+  razorpay_order_id: z.string(),
+  razorpay_payment_id: z.string(),
+  razorpay_signature: z.string(),
 });
 
-export { createOrderSchema, updateStatusSchema,orderItemSchema };
+export { createOrderSchema, updateStatusSchema,orderItemSchema ,verifyPaymentSchema};

@@ -9,11 +9,12 @@ import {
   getMyDeliveries,
   acceptOrder,
   downloadInvoice,
+  verifyPayment,
 } from "../controllers/orderController.js";
 
 import { allowRoles, protect } from "../middlewares/auth.js";
 import validate from "../middlewares/validate.js";
-import { createOrderSchema, updateStatusSchema } from "../validators/orderValidators.js";
+import { createOrderSchema, updateStatusSchema, verifyPaymentSchema } from "../validators/orderValidators.js";
 
 const router = express.Router();
 
@@ -35,5 +36,6 @@ router.put(
 router.put("/:id/accept", protect, allowRoles("delivery"), acceptOrder);
 
 router.get("/:id/invoice", protect, downloadInvoice);
+router.post("/:id/verify-payment", protect, allowRoles("user"), validate(verifyPaymentSchema), verifyPayment);
 
 export default router;

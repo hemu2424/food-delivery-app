@@ -15,11 +15,13 @@ import registerEmailListeners from "./events/emailEvents.js"
 import { createServer } from "http"
 import {Server} from "socket.io"
 import { initSocket } from "./socket/socket.js"
+import { generalLimiter, authLimiter } from "./middlewares/rateLimiter.js";
 
 connectDB();
 
 const app = express();
 app.set("etag", false);
+app.set("trust proxy", 1);
 registerEmailListeners();
 const clientUrls = process.env.CLIENT_URLS || "http://localhost:3000,http://localhost:3001,http://localhost:3002";
 const allowedOrigins = clientUrls.split(",").map((url) => url.trim().replace(/\/+$/, ""));
@@ -49,12 +51,12 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-app.use("/api/auth", authRoutes);
-app.use("/api/restaurants", restaurantRoutes);
-app.use("/api/menu", menuItemRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/addresses", addressRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/restaurants", generalLimiter, restaurantRoutes);
+app.use("/api/menu",generalLimiter, menuItemRoutes);
+app.use("/api/orders", generalLimiter, orderRoutes);
+app.use("/api/admin", generalLimiter, adminRoutes);
+app.use("/api/addresses", generalLimiter, addressRoutes);
 
 
 const httpServer = createServer(app);
@@ -67,7 +69,7 @@ const io = new Server(httpServer, {
 });
 
 initSocket(io); 
-
+console.log(process.memoryUsage());
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
