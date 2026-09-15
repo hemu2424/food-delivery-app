@@ -56,8 +56,25 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cod"], 
+      enum: ["cod", "razorpay"],
       default: "cod",
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "failed"],
+      default: function () {
+        return this.paymentMethod === "cod" ? "pending" : "pending";
+        // COD orders stay "pending" until delivery (you could add a "collected" step later)
+        // Razorpay orders start "pending" and become "paid" only after signature verification
+      },
+    },
+    razorpayOrderId: {
+      type: String,
+      default: null,
+    },
+    razorpayPaymentId: {
+      type: String,
+      default: null,
     },
         deliveryLocation: {
       type: {

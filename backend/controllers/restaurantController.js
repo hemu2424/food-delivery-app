@@ -7,15 +7,30 @@ import geocodeAddress from "../utils/geocode.js";
 
 
 
+import redis from "../config/redis.js";
+
+const CUISINES_CACHE_KEY = "restaurants:cuisines";
+const CACHE_TTL_SECONDS = 300; // 5 minutes — cuisines rarely change, but not "never"
+
 async function getCuisines(req, res, next) {
   try {
+    // Step 1: check the cache first
+    const cached = await redis.get(CUISINES_CACHE_KEY);
+    if (cached) {
+      return res.json(JSON.parse(cached)); // cache HIT — no database query at all
+    }
 
+    // Step 2: cache MISS — fetch from MongoDB like before
     const cuisines = await Restaurant.distinct("cuisine", {
       isActive: true,
       cuisine: { $nin: [null, ""] },
     });
+    const sortedCuisines = cuisines.sort();
 
-    res.json(cuisines.sort());
+    // Step 3: store in cache for next time, with an expiry
+    await redis.set(CUISINES_CACHE_KEY, JSON.stringify(sortedCuisines), "EX", CACHE_TTL_SECONDS);
+
+    res.json(sortedCuisines);
   } catch (error) {
     next(error);
   }
@@ -100,7 +115,7 @@ async function createRestaurant(req, res, next) {
         coordinates: [geocoded.longitude, geocoded.latitude], 
       },
     });
-
+     await redis.del(CUISINES_CACHE_KEY);
     res.status(201).json(restaurant);
   } catch (error) {
     next(error);

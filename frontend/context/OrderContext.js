@@ -111,13 +111,19 @@ export function OrderProvider({ children }) {
     latitude: cartData.latitude,
     longitude: cartData.longitude,
     items: cartData.items,
+    paymentMethod: cartData.paymentMethod, 
   });
+  return response.data;
+}
+async function verifyPayment(orderId, paymentData) {
+  const response = await api.post(`/orders/${orderId}/verify-payment`, paymentData);
   return response.data;
 }
 
   return (
     <OrderContext.Provider
       value={{
+        verifyPayment,
         placeOrder,
         myOrders,
         myOrdersPagination,
