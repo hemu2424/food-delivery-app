@@ -3,11 +3,16 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
+
     container_name: food-delivery-backend-dev
+
     restart: unless-stopped
+
     tty: true
+
     ports:
       - "5000:5000"
+
     environment:
       MONGO_URI: ${MONGO_URI}
       JWT_SECRET: ${JWT_SECRET}
@@ -24,9 +29,12 @@ services:
       GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
       GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
       GMAIL_REFRESH_TOKEN: ${GMAIL_REFRESH_TOKEN}
+
     volumes:
       - ./backend:/app
       - /app/node_modules
+
+    command: npx nodemon --legacy-watch server.js
 
   frontend:
     build:

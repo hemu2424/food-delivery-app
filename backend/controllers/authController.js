@@ -302,11 +302,31 @@ async function updateProfile(req, res, next) {
     next(error);
   }
 }
+async function changePassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await Users.findById(req.user._id);
+    const isCorrect = await bcrypt.compare(currentPassword, user.password);
+    if (!isCorrect) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    next(error);
+  }
+}
 
 export {
   register,
   verifyEmail,
   resendOtp,
+  changePassword,
   login,
   logout,
   getProfile,
