@@ -23,7 +23,7 @@ const app = express();
 app.set("etag", false);
 app.set("trust proxy", 1);
 registerEmailListeners();
-const clientUrls = process.env.CLIENT_URLS || "http://localhost:3000,http://localhost:3001,http://localhost:3002";
+const clientUrls = process.env.CLIENT_URL ;
 const allowedOrigins = clientUrls.split(",").map((url) => url.trim().replace(/\/+$/, ""));
 
 app.use(cors({

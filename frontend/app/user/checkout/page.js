@@ -81,11 +81,10 @@ export default function CheckoutPage() {
         name: user?.name || "",
         email: user?.email || "",
       },
-      theme: { color: "#ea580c" }, // matches your orange brand color
+      theme: { color: "#ea580c" }, 
 
       handler: async function (razorpayResponse) {
-        // This callback fires ONLY after the widget reports success.
-        // We still MUST verify server-side — this is not itself proof of payment.
+       
         try {
           await verifyPayment(order._id, {
             razorpay_order_id: razorpayResponse.razorpay_order_id,

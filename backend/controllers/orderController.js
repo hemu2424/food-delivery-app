@@ -36,16 +36,15 @@ async function createOrder(req, res, next) {
       paymentMethod: paymentMethod || "cod",
     });
 
-    // COD orders are done here — same as before, nothing extra needed
     if (order.paymentMethod === "cod") {
       return res.status(201).json({ order });
     }
 
-    // Razorpay path: create a Razorpay-side order too, linked to our MongoDB order
+
     const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(totalAmount * 100), // Razorpay works in PAISE, not rupees — always multiply by 100
+      amount: Math.round(totalAmount * 100), 
       currency: "INR",
-      receipt: order._id.toString(), // ties the Razorpay order back to OUR order's ID
+      receipt: order._id.toString(), 
     });
 
     order.razorpayOrderId = razorpayOrder.id;
@@ -300,9 +299,7 @@ async function verifyPayment(req, res, next) {
       return res.status(400).json({ message: "Order mismatch" });
     }
 
-    // THIS is the actual security check. We recompute the expected signature
-    // ourselves, using our SECRET key, and compare it to what the client sent.
-    // If someone tampered with the payment result client-side, this will NOT match.
+
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
