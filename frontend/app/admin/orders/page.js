@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import OrderStatusBadge from "@/components/user/OrderStatusBadge";
+import Pagination from "@/components/shared/Pagination";
 import { useOrders } from "@/context/OrderContext";
 
 // Defines what the "next" status is for a given current status —
@@ -14,12 +15,19 @@ const NEXT_STATUS = {
 };
 
 export default function AdminOrdersPage() {
-  const { allOrders, adminOrdersLoading, adminOrdersError, fetchAllOrders, advanceOrderStatus } =
-    useOrders();
+  const {
+    allOrders,
+    allOrdersPagination,
+    adminOrdersLoading,
+    adminOrdersError,
+    fetchAllOrders,
+    advanceOrderStatus,
+  } = useOrders();
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchAllOrders();
-  }, [fetchAllOrders]);
+    fetchAllOrders(currentPage);
+  }, [currentPage, fetchAllOrders]);
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
@@ -67,6 +75,8 @@ export default function AdminOrdersPage() {
           );
         })}
       </div>
+
+      <Pagination pagination={allOrdersPagination} onPageChange={setCurrentPage} />
     </ProtectedRoute>
   );
 }

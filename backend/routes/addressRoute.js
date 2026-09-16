@@ -15,12 +15,15 @@ import { createAddressSchema, updateAddressSchema } from "../validators/addressV
 
 const router = express.Router();
 
-router.use(protect);
-
-router.get("/", getMyAddresses);
+// Public endpoints for address search, reverse geocoding & place details
 router.get("/search", searchAddressSuggestions);
 router.get("/reverse-geocode", reverseGeocodeLocation);
 router.get("/place-details", getPlaceDetailsEndpoint);
+
+// Protected endpoints (requires auth)
+router.use(protect);
+
+router.get("/", getMyAddresses);
 router.post("/", validate(createAddressSchema), createAddress);
 router.put("/:id", validate(updateAddressSchema), updateAddress);
 router.delete("/:id", deleteAddress);

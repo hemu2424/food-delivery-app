@@ -3,14 +3,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-
     container_name: food-delivery-backend
-
     restart: unless-stopped
-
+    tty: true
     ports:
       - "5000:5000"
-
     environment:
       MONGO_URI: ${MONGO_URI}
       JWT_SECRET: ${JWT_SECRET}
@@ -23,28 +20,27 @@ services:
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
-      GMAIL_USER: ${GMAIL_USER}
-      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
-      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
-      GMAIL_REFRESH_TOKEN: ${GMAIL_REFRESH_TOKEN}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+      REDIS_URL: ${REDIS_URL}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}   # passed at BUILD time
     container_name: food-delivery-frontend
-
     restart: unless-stopped
-
+    tty: true
     ports:
       - "3000:3000"
-
     depends_on:
       - backend
-
     environment:
-      NODE_ENV: production
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}   # also fine to keep here, harmless but not sufficient alone
