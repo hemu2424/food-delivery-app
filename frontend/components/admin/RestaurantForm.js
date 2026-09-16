@@ -5,6 +5,7 @@ import { useRestaurants } from "@/context/RestaurantContext";
 import ImageUploader from "@/components/shared/ImageUploader";
 import VideoUploader from "@/components/shared/videoUploader";
 import { useToast } from "@/context/ToastContext";
+import AddressSearchInput from "@/components/user/AddressSearchInput";
 
 // If `restaurant` is passed in, this form operates in EDIT mode.
 // If not, it operates in CREATE mode. Same fields, same uploaders, different submit action.
@@ -99,14 +100,20 @@ export default function RestaurantForm({ restaurant, onSuccess }) {
 
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
-          <input
-            name="address"
-            required
-            minLength={5}
-            placeholder="Street, City, ZIP"
+        <AddressSearchInput
+          name="address"
+          required
           value={formData.address}
           onChange={handleTextChange}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-200"
+          onSelect={(details) => {
+            setFormData((prev) => ({
+              ...prev,
+              address: details.formattedAddress || details.description || prev.address,
+            }));
+          }}
+          placeholder="Search restaurant street, locality, city or click 📍"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-200 text-sm"
+          showLocateButton={true}
         />
       </div>
 
