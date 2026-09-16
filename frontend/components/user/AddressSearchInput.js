@@ -15,7 +15,7 @@ export default function AddressSearchInput({
   showLocateButton = false,
 }) {
   const { searchAddresses, getPlaceDetails, reverseGeocode } = useAddresses();
-  const [query, setQuery] = useState(value !== undefined ? value : initialValue);
+  const [query, setQuery] = useState(initialValue);
   const [suggestions, setSuggestions] = useState([]); // [{ placeId, description }]
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -23,28 +23,35 @@ export default function AddressSearchInput({
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef(null);
 
-  useEffect(() => {
-    if (value !== undefined) {
-      setQuery(value || "");
-    }
-  }, [value]);
+  const inputValue = value !== undefined ? (value || "") : query;
 
   useEffect(() => {
-    if (!query || query.trim().length < 3) {
-      setSuggestions([]);
+    if (!inputValue || inputValue.trim().length < 3) {
       return;
     }
 
+    let isMounted = true;
     const timeoutId = setTimeout(async () => {
       setIsSearching(true);
-      const results = await searchAddresses(query);
-      setSuggestions(results || []);
-      setIsSearching(false);
-      setShowDropdown(true);
+      try {
+        const results = await searchAddresses(inputValue);
+        if (isMounted) {
+          setSuggestions(results || []);
+          setIsSearching(false);
+          setShowDropdown(true);
+        }
+      } catch {
+        if (isMounted) {
+          setIsSearching(false);
+        }
+      }
     }, 400);
 
-    return () => clearTimeout(timeoutId);
-  }, [query, searchAddresses]);
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [inputValue, searchAddresses]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -58,7 +65,9 @@ export default function AddressSearchInput({
 
   function handleInputChange(e) {
     const nextVal = e.target.value;
-    setQuery(nextVal);
+    if (value === undefined) {
+      setQuery(nextVal);
+    }
     if (onChange) {
       onChange(e);
     }
@@ -76,7 +85,9 @@ export default function AddressSearchInput({
     setIsLoadingDetails(false);
 
     const addressText = details?.formattedAddress || suggestion.description;
-    setQuery(addressText);
+    if (value === undefined) {
+      setQuery(addressText);
+    }
 
     if (onChange) {
       onChange({ target: { name, value: addressText } });
@@ -98,7 +109,9 @@ export default function AddressSearchInput({
         try {
           const result = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
           if (result?.formattedAddress) {
-            setQuery(result.formattedAddress);
+            if (value === undefined) {
+              setQuery(result.formattedAddress);
+            }
             if (onChange) {
               onChange({ target: { name, value: result.formattedAddress } });
             }
@@ -128,9 +141,9 @@ export default function AddressSearchInput({
           name={name}
           required={required}
           placeholder={placeholder}
-          value={query}
+          value={inputValue}
           onChange={handleInputChange}
-          onFocus={() => query && query.trim().length >= 3 && suggestions.length > 0 && setShowDropdown(true)}
+          onFocus={() => inputValue && inputValue.trim().length >= 3 && suggestions.length > 0 && setShowDropdown(true)}
           className={`${className} ${showLocateButton ? "pr-10" : ""}`}
         />
         {showLocateButton && (
@@ -156,7 +169,7 @@ export default function AddressSearchInput({
         </p>
       )}
 
-      {query && query.trim().length >= 3 && showDropdown && suggestions.length > 0 && (
+      {inputValue && inputValue.trim().length >= 3 && showDropdown && suggestions.length > 0 && (
         <div className="absolute z-30 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-64 overflow-y-auto">
           {suggestions.map((suggestion) => (
             <button
