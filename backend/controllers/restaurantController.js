@@ -238,7 +238,7 @@ async function deleteFileFromCloud(url, resourceType = "image") {
 const SEARCH_RADII_KM = [3, 5, 7, 10, 15,25,35]; 
 
 
-async function getNearbyRestaurants(req, res, next) {
+async function  getNearbyRestaurants(req, res, next) {
   try {
     const { lat, lng } = req.query;
 
