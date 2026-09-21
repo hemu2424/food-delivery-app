@@ -12,7 +12,7 @@ export default function CancelOrderModal({ isOpen, onClose, onConfirm, reasons, 
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg p-5 max-w-sm w-full">
         <h2 className="text-lg font-semibold mb-1">Cancel this order?</h2>
-        <p className="text-sm text-gray-500 mb-4">This can't be undone.</p>
+        <p className="text-sm text-gray-500 mb-4">This cannot be undone.</p>
 
         <label className="text-sm font-medium block mb-1">Reason</label>
         <select
