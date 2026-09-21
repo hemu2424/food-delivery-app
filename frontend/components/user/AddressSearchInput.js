@@ -79,12 +79,23 @@ export default function AddressSearchInput({
 
   async function handleSelect(suggestion) {
     setShowDropdown(false);
-    setIsLoadingDetails(true);
 
-    const details = await getPlaceDetails(suggestion.placeId);
-    setIsLoadingDetails(false);
+    let details = suggestion;
+    if (!suggestion.latitude || !suggestion.longitude || !suggestion.formattedAddress) {
+      setIsLoadingDetails(true);
+      try {
+        const fetchedDetails = await getPlaceDetails(suggestion.placeId);
+        if (fetchedDetails) {
+          details = { ...suggestion, ...fetchedDetails };
+        }
+      } catch (err) {
+        console.error("Error loading place details:", err);
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    }
 
-    const addressText = details?.formattedAddress || suggestion.description;
+    const addressText = details?.formattedAddress || suggestion.description || "";
     if (value === undefined) {
       setQuery(addressText);
     }

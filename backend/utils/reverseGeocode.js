@@ -1,22 +1,16 @@
+// Google Maps API implementation (reference)
 // async function reverseGeocode(latitude, longitude) {
 //   try {
 //     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
-
 //     const response = await fetch(url);
 //     const data = await response.json();
-
-//     if (data.status !== "OK" || !data.results || data.results.length === 0) {
-//       return null;
-//     }
-
+//     if (data.status !== "OK" || !data.results || data.results.length === 0) return null;
 //     const result = data.results[0];
 //     const components = result.address_components || [];
-
 //     function findComponent(type) {
 //       const match = components.find((c) => c.types.includes(type));
 //       return match ? match.long_name : "";
 //     }
-
 //     return {
 //       formattedAddress: result.formatted_address,
 //       latitude,
@@ -33,8 +27,17 @@
 //   }
 // }
 
-// export default reverseGeocode;
-// ---------------------------------------------------------------above for google map api-----------------------------
+function getPointCoordinates(feature) {
+  if (feature.center && Array.isArray(feature.center) && typeof feature.center[0] === "number") {
+    return feature.center;
+  }
+  let coords = feature.geometry?.coordinates;
+  if (!coords || !Array.isArray(coords)) return [];
+  while (Array.isArray(coords) && coords.length > 0 && Array.isArray(coords[0])) {
+    coords = coords[0];
+  }
+  return typeof coords[0] === "number" && typeof coords[1] === "number" ? coords : [];
+}
 
 async function reverseGeocode(latitude, longitude) {
   try {
@@ -42,7 +45,9 @@ async function reverseGeocode(latitude, longitude) {
       latitude === undefined ||
       latitude === null ||
       longitude === undefined ||
-      longitude === null
+      longitude === null ||
+      isNaN(latitude) ||
+      isNaN(longitude)
     ) {
       return null;
     }
@@ -62,8 +67,6 @@ async function reverseGeocode(latitude, longitude) {
 
     const data = await response.json();
 
-    console.log("MapTiler reverse geocode response:", data);
-
     if (
       !data.features ||
       !Array.isArray(data.features) ||
@@ -72,42 +75,59 @@ async function reverseGeocode(latitude, longitude) {
       return null;
     }
 
-    const result = data.features[0];
+    const feature = data.features[0];
+    const coordinates = getPointCoordinates(feature);
+    const parsedLat = coordinates.length >= 2 ? coordinates[1] : Number(latitude);
+    const parsedLng = coordinates.length >= 2 ? coordinates[0] : Number(longitude);
+    const context = Array.isArray(feature.context) ? feature.context : [];
 
-    const coordinates = result.geometry?.coordinates || [];
-    const context = result.context || [];
-
-    function findContext(...kinds) {
-      const match = context.find((item) => kinds.includes(item.kind));
+    function findContext(...targetTypes) {
+      const match = context.find((item) => {
+        const typeFromId = item.id ? item.id.split(".")[0].toLowerCase() : "";
+        const typeFromKind = item.kind ? item.kind.toLowerCase() : "";
+        return targetTypes.includes(typeFromId) || targetTypes.includes(typeFromKind);
+      });
       return match ? match.text : "";
     }
 
+    const country =
+      findContext("country") ||
+      (feature.properties?.country_code
+        ? feature.properties.country_code.toUpperCase()
+        : "") ||
+      "India";
+    const state =
+      findContext("region") ||
+      (feature.place_type?.includes("region") ? feature.text : "") ||
+      "";
     const city =
-      findContext("place", "municipality") ||
-      findContext("subregion");
-
-    const state = findContext("region");
-
-    const country = findContext("country");
-
+      findContext("place", "municipality", "subregion", "county") ||
+      (feature.place_type?.includes("place") ? feature.text : "") ||
+      "";
     const locality =
-      findContext("locality") ||
-      findContext("neighborhood") ||
-      findContext("district");
-
-    const pincode = findContext("postcode");
+      findContext(
+        "locality",
+        "neighborhood",
+        "neighbourhood",
+        "district",
+        "municipal_district"
+      ) ||
+      (feature.place_type?.includes("locality") ||
+      feature.place_type?.includes("poi")
+        ? feature.text
+        : "") ||
+      "";
+    const pincode = findContext("postal_code", "postcode") || "";
 
     return {
-      formattedAddress: result.place_name || "",
-
-      latitude,
-      longitude,
-
-      city,
-      state,
+      formattedAddress: feature.place_name || feature.text || "",
+      latitude: coordinates[1] ?? latitude,
+      longitude: coordinates[0] ?? longitude,
+      city: city || locality || "Not specified",
+      state: state || city || "Not specified",
       pincode,
       country,
-      locality,
+      locality: locality || city || "",
     };
   } catch (error) {
     console.error("Reverse geocode error:", error.message);
