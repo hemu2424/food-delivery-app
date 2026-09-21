@@ -61,7 +61,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "failed"],
+      enum: ["pending", "paid", "failed", "refunded"],
       default: function () {
         return this.paymentMethod === "cod" ? "pending" : "pending";
         // COD orders stay "pending" until delivery (you could add a "collected" step later)
@@ -86,6 +86,35 @@ const orderSchema = new mongoose.Schema(
         type: [Number], 
         required: true,
       },
+    },
+        cancelledBy: {
+      type: String,
+      enum: ["user", "admin"],
+      default: null,
+    },
+    cancellationReason: {
+      type: String,
+      default: null,
+    },
+    cancellationNote: {
+      type: String,
+      default: null,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    pickedUpAt: {
+      type: Date,
+      default: null,
+    },
+    deliveryCancelReason: {
+      type: String,
+      default: null,
+    },
+    refundId: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true }

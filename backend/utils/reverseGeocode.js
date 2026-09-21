@@ -79,7 +79,7 @@ async function reverseGeocode(latitude, longitude) {
 
     function findContext(...kinds) {
       const match = context.find((item) => kinds.includes(item.kind));
-      return match ? item.text : "";
+      return match ? match.text : "";
     }
 
     const city =

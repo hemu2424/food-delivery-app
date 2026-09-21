@@ -257,7 +257,7 @@ async function acceptOrder(req, res, next) {
 
     const order = await Order.findOneAndUpdate(
       { _id: req.params.id, deliveryPartner: null, status: "preparing" },
-      { deliveryPartner: req.user._id, status: "out_for_delivery" },
+      { deliveryPartner: req.user._id },
       { new: true }
     );
 
@@ -272,15 +272,137 @@ async function acceptOrder(req, res, next) {
       return res.status(400).json({ message: "Order is not ready for pickup yet" });
     }
     const io = getIO();
-    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
-      orderId: order._id,
-      status: order.status,
-    });
+    
 
   
     io.emit("order:claimed", { orderId: order._id });
 
     res.json(order);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function markPickedUp(req, res, next) {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const isAssignedPartner =
+      order.deliveryPartner && order.deliveryPartner.toString() === req.user._id.toString();
+    if (!isAssignedPartner) {
+      return res.status(403).json({ message: "This order is not assigned to you" });
+    }
+
+    order.status = "out_for_delivery";
+    order.pickedUpAt = new Date();
+    await order.save();
+
+    const io = getIO();
+    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+      orderId: order._id,
+      status: order.status,
+    });
+    io.to("admins").emit("order:statusUpdated", {
+      orderId: order._id,
+      status: order.status,
+    });
+
+    res.json(order);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function cancelOrder(req, res, next) {
+  try {
+    const { reason, note } = req.body;
+
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "You do not have access to this order" });
+    }
+
+    const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
+    if (!CANCELLABLE_STATUSES.includes(order.status)) {
+      return res.status(400).json({
+        message: "This order can no longer be cancelled — it's already out for delivery.",
+      });
+    }
+
+    if (order.paymentMethod === "razorpay" && order.paymentStatus === "paid") {
+      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+        amount: Math.round(order.totalAmount * 100),
+      });
+      order.paymentStatus = "refunded";
+      order.refundId = refund.id;
+    }
+
+    order.status = "cancelled";
+    order.cancelledBy = "user";
+    order.cancellationReason = reason;
+    order.cancellationNote = note || null;
+    order.cancelledAt = new Date();
+    order.deliveryPartner = null; // free up the rider if one had accepted
+
+    await order.save();
+
+    const io = getIO();
+    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+      orderId: order._id,
+      status: order.status,
+    });
+    io.to("admins").emit("order:statusUpdated", {
+      orderId: order._id,
+      status: order.status,
+    });
+
+    res.json(order);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function cancelAssignedOrder(req, res, next) {
+  try {
+    const { reason, note } = req.body;
+
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const isAssignedPartner =
+      order.deliveryPartner && order.deliveryPartner.toString() === req.user._id.toString();
+    if (!isAssignedPartner) {
+      return res.status(403).json({ message: "This order is not assigned to you" });
+    }
+
+    if (order.pickedUpAt) {
+      return res.status(400).json({
+        message: "You can't cancel after picking up the order. Contact support instead.",
+      });
+    }
+
+    order.deliveryPartner = null;
+    order.deliveryCancelReason = reason;
+    // status stays "preparing" — it goes back into the available pool
+    await order.save();
+
+    const io = getIO();
+    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+      orderId: order._id,
+      status: order.status,
+    });
+    io.emit("order:unassigned", { orderId: order._id, order });
+
+    res.json({ message: "You've backed out of this delivery. It's back in the pool." });
   } catch (error) {
     next(error);
   }
@@ -332,5 +454,8 @@ export {
   getAvailableOrders,
   getMyDeliveries,
   acceptOrder,
-  downloadInvoice
+  downloadInvoice,
+  markPickedUp,
+  cancelOrder,
+  cancelAssignedOrder,
 };
