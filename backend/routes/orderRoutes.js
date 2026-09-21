@@ -10,11 +10,14 @@ import {
   acceptOrder,
   downloadInvoice,
   verifyPayment,
+  markPickedUp,
+  cancelAssignedOrder,
+  cancelOrder,
 } from "../controllers/orderController.js";
 
 import { allowRoles, protect } from "../middlewares/auth.js";
 import validate from "../middlewares/validate.js";
-import { createOrderSchema, updateStatusSchema, verifyPaymentSchema } from "../validators/orderValidators.js";
+import { cancelOrderSchema, createOrderSchema, deliveryCancelSchema, updateStatusSchema, verifyPaymentSchema } from "../validators/orderValidators.js";
 
 const router = express.Router();
 
@@ -24,6 +27,9 @@ router.get("/my", protect, allowRoles("user"), getMyOrders);
 router.get("/available", protect, allowRoles("delivery"), getAvailableOrders);
 router.get("/delivery/my", protect, allowRoles("delivery"), getMyDeliveries);
 router.get("/", protect, allowRoles("admin"), getAllOrders);
+router.put("/:id/pickup", protect, allowRoles("delivery"), markPickedUp);
+router.put("/:id/cancel-delivery", protect, allowRoles("delivery"), validate(deliveryCancelSchema), cancelAssignedOrder);
+router.put("/:id/cancel", protect, allowRoles("user"), validate(cancelOrderSchema), cancelOrder);
 
 router.get("/:id", protect, getOrderById);
 router.put(

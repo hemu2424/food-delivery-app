@@ -8,7 +8,7 @@ services:
     tty: true
     ports:
       - "5000:5000"
-    environment:
+    environment:  
       MONGO_URI: ${MONGO_URI}
       JWT_SECRET: ${JWT_SECRET}
       PORT: 5000

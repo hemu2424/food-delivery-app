@@ -24,5 +24,30 @@ const verifyPaymentSchema = z.object({
   razorpay_payment_id: z.string(),
   razorpay_signature: z.string(),
 });
+const CANCEL_REASONS = [
+  "Changed my mind",
+  "Ordered by mistake",
+  "Delivery is taking too long",
+  "Found a better price elsewhere",
+  "Other",
+];
 
-export { createOrderSchema, updateStatusSchema,orderItemSchema ,verifyPaymentSchema};
+const DELIVERY_CANCEL_REASONS = [
+  "Restaurant is closed",
+  "Unable to reach the location in time",
+  "Vehicle breakdown",
+  "Restaurant is not ready",
+  "Other",
+];
+
+const cancelOrderSchema = z.object({
+  reason: z.enum(CANCEL_REASONS),
+  note: z.string().max(300).optional(),
+});
+
+const deliveryCancelSchema = z.object({
+  reason: z.enum(DELIVERY_CANCEL_REASONS),
+  note: z.string().max(300).optional(),
+});
+
+export { createOrderSchema, updateStatusSchema,orderItemSchema ,verifyPaymentSchema, cancelOrderSchema, deliveryCancelSchema};

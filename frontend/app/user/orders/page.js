@@ -6,10 +6,22 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import OrderStatusBadge from "@/components/user/OrderStatusBadge";
 import Pagination from "@/components/shared/Pagination";
 import { useOrders } from "@/context/OrderContext";
+import CancelOrderModal from "@/components/shared/CancelOrderModal";
 
 function MyOrdersContent() {
   const { myOrders, myOrdersPagination, loading, error, fetchMyOrders } = useOrders();
   const [currentPage, setCurrentPage] = useState(1);
+  const [cancelTarget, setCancelTarget] = useState(null); // order._id
+const [cancelling, setCancelling] = useState(false);
+const { cancelOrder } = useOrders(); // already destructure other fields too
+const CANCEL_REASONS = [
+  "Changed my mind",
+  "Ordered by mistake",
+  "Delivery is taking too long",
+  "Found a better price elsewhere",
+  "Other",
+];
+const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
 
   useEffect(() => {
     fetchMyOrders(currentPage);
@@ -36,9 +48,32 @@ function MyOrdersContent() {
                 </p>
               </div>
               <OrderStatusBadge status={order.status} />
+              {CANCELLABLE_STATUSES.includes(order.status) && (
+  <button
+    onClick={(e) => { e.preventDefault(); setCancelTarget(order._id); }}
+    className="text-xs text-red-600 border border-red-600 px-2 py-1 rounded-md hover:bg-red-50 mt-1"
+  >
+    Cancel
+  </button>
+)}
             </div>
           </Link>
         ))}
+        <CancelOrderModal
+  isOpen={!!cancelTarget}
+  onClose={() => setCancelTarget(null)}
+  loading={cancelling}
+  reasons={CANCEL_REASONS}
+  onConfirm={async (reason, note) => {
+    setCancelling(true);
+    try {
+      await cancelOrder(cancelTarget, reason, note, currentPage);
+      setCancelTarget(null);
+    } finally {
+      setCancelling(false);
+    }
+  }}
+/> 
       </div>
 
       <Pagination pagination={myOrdersPagination} onPageChange={setCurrentPage} />

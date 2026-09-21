@@ -119,10 +119,28 @@ async function verifyPayment(orderId, paymentData) {
   const response = await api.post(`/orders/${orderId}/verify-payment`, paymentData);
   return response.data;
 }
+async function markPickedUp(orderId) {
+  await api.put(`/orders/${orderId}/pickup`);
+  await fetchDeliveryData();
+}
+
+async function cancelAssignedOrder(orderId, reason, note) {
+  await api.put(`/orders/${orderId}/cancel-delivery`, { reason, note });
+  await fetchDeliveryData();
+}
+
+async function cancelOrder(orderId, reason, note, page = 1) {
+  const response = await api.put(`/orders/${orderId}/cancel`, { reason, note });
+  await fetchMyOrders(page);
+  return response.data;
+}
 
   return (
     <OrderContext.Provider
       value={{
+        markPickedUp,
+        cancelAssignedOrder,
+        cancelOrder,
         verifyPayment,
         placeOrder,
         myOrders,

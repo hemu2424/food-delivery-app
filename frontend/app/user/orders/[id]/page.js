@@ -7,6 +7,8 @@ import OrderStatusBadge from "@/components/user/OrderStatusBadge";
 import { useOrderStatusListener } from "@/hooks/useOrderStatusListener";
 import api, { getInvoiceUrl } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
+import CancelOrderModal from "@/components/shared/CancelOrderModal";
+import { useOrders } from "@/context/OrderContext";
 
 function OrderDetailContent() {
   const { id } = useParams();
@@ -14,6 +16,31 @@ function OrderDetailContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { showToast } = useToast();
+  const CANCEL_REASONS = [
+  "Changed my mind",
+  "Ordered by mistake",
+  "Delivery is taking too long",
+  "Found a better price elsewhere",
+  "Other",
+];
+const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
+  const { cancelOrder } = useOrders();
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleCancel(reason, note) {
+    setCancelling(true);
+    try {
+      const updated = await cancelOrder(order._id, reason, note);
+      setOrder(updated);
+      showToast("Order cancelled");
+      setShowCancelModal(false);
+    } catch (err) {
+      showToast(err.response?.data?.message || "Could not cancel order", "error");
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   useEffect(() => {
     async function fetchOrder() {
@@ -51,6 +78,22 @@ function OrderDetailContent() {
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Order Confirmed 🎉</h1>
             <OrderStatusBadge status={order.status} />
+                      {CANCELLABLE_STATUSES.includes(order.status) && (
+            <button
+              onClick={() => setShowCancelModal(true)}
+              className="mt-2 text-sm text-red-600 border border-red-600 px-3 py-1.5 rounded-md hover:bg-red-50"
+            >
+              Cancel Order
+            </button>
+          )}
+
+          <CancelOrderModal
+            isOpen={showCancelModal}
+            onClose={() => setShowCancelModal(false)}
+            onConfirm={handleCancel}
+            reasons={CANCEL_REASONS}
+            loading={cancelling}
+          />
           </div>
 
           <p className="text-sm text-gray-500 mb-4">

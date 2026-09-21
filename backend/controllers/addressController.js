@@ -27,7 +27,9 @@ async function createAddress(req, res, next) {
 
     const address = await Address.create({
       ...rest,
-      city: rest.city || rest.locality || "Not specified", 
+      city: rest.city || rest.locality || "Not specified",
+      state: rest.state || "Not specified",
+      country: rest.country || "India",
       user: req.user._id,
       isDefault: shouldBeDefault,
       location: {

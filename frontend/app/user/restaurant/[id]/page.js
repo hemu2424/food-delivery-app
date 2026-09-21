@@ -1,58 +1,30 @@
-"use client";
+import { notFound } from "next/navigation";
+import RestaurantDetailClient from "@/components/user/RestaurantDetailClient";
 
-import { useEffect } from "react";
-import { useParams } from "next/navigation";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import MenuItemCard from "@/components/user/MenuItemCard";
-import { useRestaurants } from "@/context/RestaurantContext";
-import { useCart } from "@/context/CartContext";
-import { groupByCategory } from "@/lib/groupByCategory";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
 
-export default function RestaurantDetailPage() {
-  const { id } = useParams();
-  const { currentRestaurant, menuItems, detailLoading, detailError, fetchRestaurantById } =
-    useRestaurants();
-  const { addItem } = useCart();
+async function getRestaurantData(id) {
+  const res = await fetch(`${API_URL}/restaurants/${id}`, {
+    next: { revalidate: 30 }, // cache for 30s, then refresh in background
+  });
 
-  useEffect(() => {
-    fetchRestaurantById(id);
-  }, [id, fetchRestaurantById]);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to load restaurant");
 
-  function handleAddToCart(menuItem) {
-    addItem(id, currentRestaurant.name, menuItem);
-  }
+  return res.json();
+}
 
-  const groupedMenu = groupByCategory(menuItems);
-  const categories = Object.keys(groupedMenu); 
+export default async function RestaurantDetailPage({ params }) {
+  const { id } = await params;
+  const data = await getRestaurantData(id);
+
+  if (!data) notFound();
 
   return (
-    <ProtectedRoute allowedRoles={["user"]}>
-      {detailLoading && <p className="text-gray-400">Loading menu...</p>}
-      {detailError && <p className="text-red-600">{detailError}</p>}
-
-      {currentRestaurant && (
-        <>
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">{currentRestaurant.name}</h1>
-            <p className="text-gray-500">{currentRestaurant.cuisine}</p>
-          </div>
-
-          {menuItems.length === 0 && (
-            <p className="text-gray-400">This restaurant hasn&apos;t added any menu items yet.</p>
-          )}
-
-          {categories.map((category) => (
-            <div key={category} className="mb-8">
-              <h2 className="text-lg font-semibold mb-3 pb-2 border-b">{category}</h2>
-              <div className="space-y-3">
-                {groupedMenu[category].map((item) => (
-                  <MenuItemCard key={item._id} item={item} onAdd={handleAddToCart} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </>
-      )}
-    </ProtectedRoute>
+    <RestaurantDetailClient
+      restaurantId={id}
+      restaurant={data.restaurant}
+      initialMenuItems={data.menuItems}
+    />
   );
 }
