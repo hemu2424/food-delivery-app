@@ -31,11 +31,11 @@ export default function EditAddressForm({ address, onSuccess, onCancel }) {
       // otherwise the existing location stays untouched (updateAddressSchema is .partial(), so this is fine)
       if (newLocation) {
         payload.formattedAddress = newLocation.formattedAddress;
-        payload.city = newLocation.city;
-        payload.state = newLocation.state;
-        payload.pincode = newLocation.pincode;
-        payload.country = newLocation.country;
-        payload.locality = newLocation.locality;
+        payload.city = newLocation.city || "Not specified";
+        payload.state = newLocation.state || newLocation.city || "Not specified";
+        payload.pincode = newLocation.pincode || "";
+        payload.country = newLocation.country || "India";
+        payload.locality = newLocation.locality || "";
         payload.latitude = newLocation.latitude;
         payload.longitude = newLocation.longitude;
       }
