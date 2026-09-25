@@ -5,7 +5,7 @@ const createAddressSchema = z.object({
   flatOrBuilding: z.string().min(2, "Please enter your flat/house/building details"),
   locality: z.string().optional(),
   city: z.string().optional(), // relaxed — not every location has a clean "city" tag
-  state: z.string().optional(),
+  state: z.string().min(1, "State is required"),
   pincode: z.string().optional(), // some rural/less-mapped areas also lack this
   country: z.string().optional(),
   formattedAddress: z.string().min(1, "Address is required"),
