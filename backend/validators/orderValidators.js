@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const orderItemSchema = z.object({
   menuItem: z.string().min(1, "menuItem ID is required"),
-  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
+  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1").max(20, "Quantity cannot exceed 20 per item"),
 });
 
 

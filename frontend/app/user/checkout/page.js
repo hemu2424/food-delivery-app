@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useCart } from "@/context/CartContext";
@@ -18,6 +18,29 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod"); // "cod" | "razorpay"
   const [error, setError] = useState("");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const checkoutOpenRef = useRef(false);
+
+  function loadRazorpay() {
+    if (window.Razorpay) return Promise.resolve();
+
+    const existingScript = document.querySelector('script[data-razorpay-checkout]');
+    if (existingScript) {
+      return new Promise((resolve, reject) => {
+        existingScript.addEventListener("load", resolve, { once: true });
+        existingScript.addEventListener("error", reject, { once: true });
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.dataset.razorpayCheckout = "true";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Could not load Razorpay Checkout."));
+      document.head.appendChild(script);
+    });
+  }
 
   async function handlePlaceOrder() {
     if (!finalizedAddress) {
@@ -48,14 +71,14 @@ export default function CheckoutPage() {
       }
 
       // Razorpay: launch the checkout widget using details returned from the backend
-      openRazorpayCheckout(response);
+      await openRazorpayCheckout(response);
     } catch (err) {
       setError(err.response?.data?.message || "Could not place order. Please try again.");
       setIsPlacingOrder(false);
     }
   }
 
-  function openRazorpayCheckout(response) {
+  async function openRazorpayCheckout(response) {
     const { order, razorpay } = response;
 
     if (!razorpay) {
@@ -64,11 +87,20 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (typeof window === "undefined" || !window.Razorpay) {
-      setError("Payment SDK is loading. Please wait a moment and try again.");
+    if (checkoutOpenRef.current) {
       setIsPlacingOrder(false);
       return;
     }
+
+    try {
+      await loadRazorpay();
+    } catch {
+      setError("Payment SDK could not be loaded. Please check your connection and try again.");
+      setIsPlacingOrder(false);
+      return;
+    }
+
+    checkoutOpenRef.current = true;
 
     const options = {
       key: razorpay.keyId,
@@ -92,9 +124,11 @@ export default function CheckoutPage() {
             razorpay_signature: razorpayResponse.razorpay_signature,
           });
           clearCart();
+          checkoutOpenRef.current = false;
           router.push(`/user/orders/${order._id}`);
         } catch (err) {
           setError("Payment could not be verified. Please contact support if money was deducted.");
+          checkoutOpenRef.current = false;
           setIsPlacingOrder(false);
         }
       },
@@ -104,6 +138,7 @@ export default function CheckoutPage() {
           // User closed the widget without paying — order already exists as "pending",
           // they can find it in order history and retry, but we don't auto-navigate anywhere.
           setError("Payment was not completed. Your order is saved — you can retry from your order history.");
+          checkoutOpenRef.current = false;
           setIsPlacingOrder(false);
         },
       },

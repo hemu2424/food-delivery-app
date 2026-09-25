@@ -26,6 +26,7 @@
     "mongoose": "^9.9.2",
     "multer": "^2.2.0",
     "multer-storage-cloudinary-v2": "^1.0.3",
+    "ngrok": "^5.0.0-beta.2",
     "nodemailer": "^9.0.5",
     "pdfkit": "^0.20.1",
     "rate-limit-redis": "^6.0.1",

@@ -11,7 +11,6 @@ import { ToastProvider } from "@/context/ToastContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { LocationProvider } from "@/context/LocationContext";
 import { AddressProvider } from "@/context/AddressContext";
-import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,11 +31,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Script 
-          src="https://checkout.razorpay.com/v1/checkout.js" 
-          strategy="afterInteractive" 
-        />
-
         <ToastProvider>
           <AuthProvider>
             <AddressProvider>

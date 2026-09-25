@@ -7,9 +7,19 @@ import crypto from "crypto";
 
 import razorpay from "../config/razorpay.js";
 
+import Restaurant from "../models/Restaurant.js";
+
 async function createOrder(req, res, next) {
   try {
     const { restaurant, items, deliveryAddress, latitude, longitude, paymentMethod } = req.body;
+
+    const restaurantDoc = await Restaurant.findById(restaurant);
+    if (!restaurantDoc) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+    if (!restaurantDoc.isActive) {
+      return res.status(400).json({ message: "This restaurant is not currently accepting orders" });
+    }
 
     let totalAmount = 0;
     const orderItems = [];
@@ -18,6 +28,9 @@ async function createOrder(req, res, next) {
       const menuItem = await MenuItems.findById(cartItem.menuItem);
       if (!menuItem) {
         return res.status(404).json({ message: `Menu item not found: ${cartItem.menuItem}` });
+      }
+      if (menuItem.restaurant.toString() !== restaurant) {
+        return res.status(400).json({ message: `${menuItem.name} does not belong to this restaurant` });
       }
       if (!menuItem.isAvailable) {
         return res.status(400).json({ message: `${menuItem.name} is currently unavailable` });
@@ -146,6 +159,8 @@ async function getAllOrders(req, res, next) {
 }
 
 
+import { canTransition } from "../utils/orderStateMachine.js";
+
 async function updateOrderStatus(req, res, next) {
   try {
     const { status } = req.body;
@@ -165,6 +180,10 @@ async function updateOrderStatus(req, res, next) {
       if (status !== "delivered") {
         return res.status(403).json({ message: "Delivery partners can only mark orders as delivered" });
       }
+    }
+
+    if (!canTransition(order.status, status)) {
+      return res.status(400).json({ message: `Cannot change order status from "${order.status}" to "${status}"` });
     }
 
     order.status = status;
@@ -296,6 +315,10 @@ async function markPickedUp(req, res, next) {
       return res.status(403).json({ message: "This order is not assigned to you" });
     }
 
+    if (!canTransition(order.status, "out_for_delivery")) {
+      return res.status(400).json({ message: `Cannot mark as picked up from status "${order.status}"` });
+    }
+
     order.status = "out_for_delivery";
     order.pickedUpAt = new Date();
     await order.save();
@@ -320,38 +343,47 @@ async function cancelOrder(req, res, next) {
   try {
     const { reason, note } = req.body;
 
-    const order = await Order.findById(req.params.id);
-    if (!order) {
+    const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
+
+    const orderCheck = await Order.findById(req.params.id);
+    if (!orderCheck) {
       return res.status(404).json({ message: "Order not found" });
     }
-
-    if (order.user.toString() !== req.user._id.toString()) {
+    if (orderCheck.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "You do not have access to this order" });
     }
 
-    const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
-    if (!CANCELLABLE_STATUSES.includes(order.status)) {
+    const order = await Order.findOneAndUpdate(
+      { _id: req.params.id, status: { $in: CANCELLABLE_STATUSES } },
+      {
+        status: "cancelled",
+        cancelledBy: "user",
+        cancellationReason: reason,
+        cancellationNote: note || null,
+        cancelledAt: new Date(),
+        deliveryPartner: null,
+      },
+      { new: true }
+    );
+
+    if (!order) {
       return res.status(400).json({
         message: "This order can no longer be cancelled — it's already out for delivery.",
       });
     }
 
     if (order.paymentMethod === "razorpay" && order.paymentStatus === "paid") {
-      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-        amount: Math.round(order.totalAmount * 100),
-      });
-      order.paymentStatus = "refunded";
-      order.refundId = refund.id;
+      try {
+        const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+          amount: Math.round(order.totalAmount * 100),
+        });
+        order.paymentStatus = "refunded";
+        order.refundId = refund.id;
+        await order.save();
+      } catch (refundError) {
+        console.error(`Refund failed for order ${order._id}:`, refundError.message);
+      }
     }
-
-    order.status = "cancelled";
-    order.cancelledBy = "user";
-    order.cancellationReason = reason;
-    order.cancellationNote = note || null;
-    order.cancelledAt = new Date();
-    order.deliveryPartner = null; // free up the rider if one had accepted
-
-    await order.save();
 
     const io = getIO();
     io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
@@ -444,7 +476,72 @@ async function verifyPayment(req, res, next) {
   }
 }
 
+async function razorpayWebhookHandler(req, res) {
+  try {
+    const signature = req.headers["x-razorpay-signature"];
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
+      .update(req.body) // raw Buffer, thanks to express.raw() on this route
+      .digest("hex");
+
+    if (signature !== expectedSignature) {
+      console.error("Razorpay webhook: signature mismatch");
+      return res.status(400).json({ message: "Invalid signature" });
+    }
+
+    const event = JSON.parse(req.body.toString());
+    console.log(`Razorpay webhook received: ${event.event}`);
+
+    // Acknowledge immediately once the signature checks out — Razorpay retries
+    // with backoff if we don't respond fast, and retries can pile up otherwise.
+    res.status(200).json({ received: true });
+
+    if (event.event === "payment.captured") {
+      const payment = event.payload.payment.entity;
+      const order = await Order.findOne({ razorpayOrderId: payment.order_id });
+      if (!order) {
+        console.error(`Webhook: no order found for razorpay order ${payment.order_id}`);
+        return;
+      }
+      if (order.paymentStatus === "paid") {
+        return; // already processed — Razorpay can send this event more than once
+      }
+      order.paymentStatus = "paid";
+      order.razorpayPaymentId = payment.id;
+      await order.save();
+      console.log(`Webhook: order ${order._id} marked paid via payment.captured`);
+    }
+
+    if (event.event === "payment.failed") {
+      const payment = event.payload.payment.entity;
+      const order = await Order.findOne({ razorpayOrderId: payment.order_id });
+      if (!order) return;
+      if (order.paymentStatus === "paid") return; // don't downgrade an already-confirmed payment
+      order.paymentStatus = "failed";
+      await order.save();
+      console.log(`Webhook: order ${order._id} marked failed via payment.failed`);
+    }
+
+    if (event.event === "refund.processed") {
+      const refund = event.payload.refund.entity;
+      const order = await Order.findOne({ razorpayPaymentId: refund.payment_id });
+      if (!order) return;
+      if (order.paymentStatus === "refunded") return; // idempotent
+      order.paymentStatus = "refunded";
+      order.refundId = refund.id;
+      await order.save();
+      console.log(`Webhook: order ${order._id} marked refunded via refund.processed`);
+    }
+  } catch (error) {
+    console.error("Razorpay webhook error:", error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Webhook processing failed" });
+    }
+  }
+}
+
 export {
+  razorpayWebhookHandler,
   verifyPayment,
   createOrder,
   getMyOrders,

@@ -1,5 +1,6 @@
 import {Users} from "../models/Users.js";
 import jwt from "jsonwebtoken"
+import { getCachedUser, setCachedUser } from "../utils/userCache.js";
 
 async function  protect(req,res,next){
 
@@ -17,7 +18,19 @@ async function  protect(req,res,next){
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await Users.findById(decoded.id).select("-password");
+
+        let user = await getCachedUser(decoded.id);
+
+        if (!user) {
+          const userDoc = await Users.findById(decoded.id).select("-password");
+          if (!userDoc) {
+            return res.status(401).json({
+              message: "user not exist"
+            });
+          }
+          user = userDoc.toObject();
+          await setCachedUser(decoded.id, user);
+        }
 
         if(!user){
           return res.status(401).json({
