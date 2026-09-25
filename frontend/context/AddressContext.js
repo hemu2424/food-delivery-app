@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -23,76 +23,62 @@ export function AddressProvider({ children }) {
       setAddresses(response.data);
       setError("");
     } catch (err) {
-      if (err.response?.status !== 401) {
-        setError("Could not load your addresses.");
-      }
+      if (err.response?.status !== 401) setError("Could not load your addresses.");
     } finally {
       setLoading(false);
     }
   }, [user]);
 
-  async function createAddress(addressData) {
+  const createAddress = useCallback(async (addressData) => {
     const response = await api.post("/addresses", addressData);
     await fetchAddresses();
     return response.data;
-  }
+  }, [fetchAddresses]);
 
-  async function deleteAddress(id) {
+  const deleteAddress = useCallback(async (id) => {
     await api.delete(`/addresses/${id}`);
     await fetchAddresses();
-  }
+  }, [fetchAddresses]);
 
-  async function setDefaultAddress(id) {
+  const setDefaultAddress = useCallback(async (id) => {
     await api.put(`/addresses/${id}/set-default`);
     await fetchAddresses();
-  }
+  }, [fetchAddresses]);
 
-  async function searchAddresses(query) {
+  const searchAddresses = useCallback(async (query) => {
     const response = await api.get(`/addresses/search?query=${encodeURIComponent(query)}`);
     return response.data;
-  }
+  }, []);
 
-  async function reverseGeocode(latitude, longitude) {
+  const reverseGeocode = useCallback(async (latitude, longitude) => {
     const response = await api.get(`/addresses/reverse-geocode?lat=${latitude}&lng=${longitude}`);
     return response.data;
-  }
+  }, []);
 
-  async function updateAddress(id, addressData) {
+  const updateAddress = useCallback(async (id, addressData) => {
     const response = await api.put(`/addresses/${id}`, addressData);
     await fetchAddresses();
     return response.data;
-  }
+  }, [fetchAddresses]);
 
-  async function getPlaceDetails(placeId) {
+  const getPlaceDetails = useCallback(async (placeId) => {
     const response = await api.get(`/addresses/place-details?placeId=${placeId}`);
     return response.data;
-  }
+  }, []);
 
-  return (
-    <AddressContext.Provider
-      value={{
-        addresses,
-        loading,
-        error,
-        fetchAddresses,
-        createAddress,
-        deleteAddress,
-        setDefaultAddress,
-        searchAddresses,
-        reverseGeocode,
-        updateAddress,
-        getPlaceDetails,
-      }}
-    >
-      {children}
-    </AddressContext.Provider>
-  );
+  const value = useMemo(() => ({
+    addresses, loading, error, fetchAddresses, createAddress, deleteAddress,
+    setDefaultAddress, searchAddresses, reverseGeocode, updateAddress, getPlaceDetails
+  }), [
+    addresses, loading, error, fetchAddresses, createAddress, deleteAddress,
+    setDefaultAddress, searchAddresses, reverseGeocode, updateAddress, getPlaceDetails
+  ]);
+
+  return <AddressContext.Provider value={value}>{children}</AddressContext.Provider>;
 }
 
 export function useAddresses() {
   const context = useContext(AddressContext);
-  if (!context) {
-    throw new Error("useAddresses must be used inside an AddressProvider");
-  }
+  if (!context) throw new Error("useAddresses must be used inside an AddressProvider");
   return context;
 }

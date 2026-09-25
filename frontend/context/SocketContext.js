@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { io } from "socket.io-client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useMemo } from "react";
 
 const SocketContext = createContext(null);
 
@@ -62,7 +63,9 @@ useEffect(() => {
     };
 }, [user, showOrderStatusToast]);
 
-  return <SocketContext.Provider value={{ socket: user ? socket : null }}>{children}</SocketContext.Provider>;
+  const value = useMemo(() => ({ socket: user ? socket : null }), [user, socket]);
+
+return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
 }
 
 export function useSocket() {

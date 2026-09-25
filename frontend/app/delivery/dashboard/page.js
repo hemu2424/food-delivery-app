@@ -15,8 +15,8 @@ export default function DeliveryDashboardPage() {
   const {
     availableOrders, myDeliveries, deliveryLoading, deliveryError,
     fetchDeliveryData, acceptOrder, markDelivered, removeAvailableOrderLocally,
+    markPickedUp, cancelAssignedOrder,
   } = useOrders();
-    const { markPickedUp, cancelAssignedOrder, /* ...existing ones */ } = useOrders();
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling, setCancelling] = useState(false);
 

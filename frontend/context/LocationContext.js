@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import api from "@/lib/api";
 import { useAddresses } from "@/context/AddressContext";
 
@@ -34,8 +34,7 @@ export function LocationProvider({ children }) {
     });
   }, []);
 
-  // Uses browser Geolocation directly — called by the "Use My Location" button
-  async function useMyLocation() {
+  const useMyLocation = useCallback(async () => {
     setStatus(LOCATION_STATUS.LOADING);
     const result = await tryBrowserLocation();
     if (result) {
@@ -45,38 +44,32 @@ export function LocationProvider({ children }) {
     } else {
       setStatus(LOCATION_STATUS.NEEDS_MANUAL_INPUT);
     }
-  }
-  function setCoordinatesDirectly(latitude, longitude, sourceType) {
-  setCoordinates({ latitude, longitude });
-  setSource(sourceType);
-  setStatus(LOCATION_STATUS.READY);
-}
+  }, [tryBrowserLocation]);
 
-  // Uses the saved DEFAULT address from the Address collection — called by "Use Saved Address" button
-  async function useSavedAddress() {
+  const setCoordinatesDirectly = useCallback((latitude, longitude, sourceType) => {
+    setCoordinates({ latitude, longitude });
+    setSource(sourceType);
+    setStatus(LOCATION_STATUS.READY);
+  }, []);
+
+  const useSavedAddress = useCallback(async () => {
     setStatus(LOCATION_STATUS.LOADING);
-
-    // Make sure we have the freshest address list before checking
     let currentAddresses = addresses;
     if (currentAddresses.length === 0) {
       await fetchAddresses();
     }
-
     const defaultAddress = currentAddresses.find((a) => a.isDefault) || currentAddresses[0];
-
     if (!defaultAddress) {
       setStatus(LOCATION_STATUS.NEEDS_MANUAL_INPUT);
       return;
     }
-
-    // The address already HAS coordinates stored — no need to re-geocode at all
     const [longitude, latitude] = defaultAddress.location.coordinates;
     setCoordinates({ latitude, longitude });
     setSource("saved");
     setStatus(LOCATION_STATUS.READY);
-  }
+  }, [addresses, fetchAddresses]);
 
-  async function setManualLocation(addressText) {
+  const setManualLocation = useCallback(async (addressText) => {
     setStatus(LOCATION_STATUS.LOADING);
     try {
       const response = await api.get(`/restaurants/geocode?address=${encodeURIComponent(addressText)}`);
@@ -88,27 +81,27 @@ export function LocationProvider({ children }) {
       setStatus(LOCATION_STATUS.NEEDS_MANUAL_INPUT);
       return false;
     }
-  }
+  }, []);
 
-  function resetLocation() {
+  const resetLocation = useCallback(() => {
     setCoordinates(null);
     setSource(null);
     setStatus(LOCATION_STATUS.IDLE);
-  }
+  }, []);
 
-  return (
-    <LocationContext.Provider
-      value={{ coordinates, status, source, useMyLocation, useSavedAddress, setManualLocation, resetLocation, LOCATION_STATUS ,setCoordinatesDirectly}}
-    >
-      {children}
-    </LocationContext.Provider>
-  );
+  const value = useMemo(() => ({
+    coordinates, status, source, useMyLocation, useSavedAddress,
+    setManualLocation, resetLocation, LOCATION_STATUS, setCoordinatesDirectly
+  }), [
+    coordinates, status, source, useMyLocation, useSavedAddress,
+    setManualLocation, resetLocation, setCoordinatesDirectly
+  ]);
+
+  return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
 }
 
 export function useLocation() {
   const context = useContext(LocationContext);
-  if (!context) {
-    throw new Error("useLocation must be used inside a LocationProvider");
-  }
+  if (!context) throw new Error("useLocation must be used inside a LocationProvider");
   return context;
 }

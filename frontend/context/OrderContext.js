@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -13,7 +13,6 @@ export function OrderProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Delivery mate na state
   const [availableOrders, setAvailableOrders] = useState([]);
   const [myDeliveries, setMyDeliveries] = useState([]);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
@@ -24,9 +23,9 @@ export function OrderProvider({ children }) {
   const [adminOrdersLoading, setAdminOrdersLoading] = useState(false);
   const [adminOrdersError, setAdminOrdersError] = useState("");
 
-  function removeAvailableOrderLocally(orderId) {
+  const removeAvailableOrderLocally = useCallback((orderId) => {
     setAvailableOrders((prev) => prev.filter((order) => order._id !== orderId));
-  }
+  }, []);
 
   const fetchAllOrders = useCallback(async (page = 1) => {
     if (!user || user.role !== "admin") return;
@@ -39,18 +38,16 @@ export function OrderProvider({ children }) {
       setAllOrdersPagination(pagination);
       setAdminOrdersError("");
     } catch (err) {
-      if (err.response?.status !== 401) {
-        setAdminOrdersError("Could not load orders.");
-      }
+      if (err.response?.status !== 401) setAdminOrdersError("Could not load orders.");
     } finally {
       setAdminOrdersLoading(false);
     }
   }, [user]);
 
-  async function advanceOrderStatus(orderId, newStatus, currentPage = 1) {
+  const advanceOrderStatus = useCallback(async (orderId, newStatus, currentPage = 1) => {
     await api.put(`/orders/${orderId}/status`, { status: newStatus });
     await fetchAllOrders(currentPage);
-  }
+  }, [fetchAllOrders]);
 
   const fetchMyOrders = useCallback(async (page = 1) => {
     if (!user) {
@@ -66,9 +63,7 @@ export function OrderProvider({ children }) {
       setMyOrdersPagination(pagination);
       setError("");
     } catch (err) {
-      if (err.response?.status !== 401) {
-        setError("Could not load your orders.");
-      }
+      if (err.response?.status !== 401) setError("Could not load your orders.");
     } finally {
       setLoading(false);
     }
@@ -86,94 +81,76 @@ export function OrderProvider({ children }) {
       setMyDeliveries(myDeliveriesRes.data);
       setDeliveryError("");
     } catch (err) {
-      if (err.response?.status !== 401) {
-        setDeliveryError("Could not load delivery data.");
-      }
+      if (err.response?.status !== 401) setDeliveryError("Could not load delivery data.");
     } finally {
       setDeliveryLoading(false);
     }
   }, [user]);
 
-  async function acceptOrder(orderId) {
+  const acceptOrder = useCallback(async (orderId) => {
     await api.put(`/orders/${orderId}/accept`);
-    await fetchDeliveryData(); 
-  }
+    await fetchDeliveryData();
+  }, [fetchDeliveryData]);
 
-  async function markDelivered(orderId) {
+  const markDelivered = useCallback(async (orderId) => {
     await api.put(`/orders/${orderId}/status`, { status: "delivered" });
     await fetchDeliveryData();
-  }
+  }, [fetchDeliveryData]);
 
-  async function placeOrder(cartData) {
-  const response = await api.post("/orders", {
-    restaurant: cartData.restaurantId,
-    deliveryAddress: cartData.deliveryAddress,
-    latitude: cartData.latitude,
-    longitude: cartData.longitude,
-    items: cartData.items,
-    paymentMethod: cartData.paymentMethod, 
-  });
-  return response.data;
-}
-async function verifyPayment(orderId, paymentData) {
-  const response = await api.post(`/orders/${orderId}/verify-payment`, paymentData);
-  return response.data;
-}
-async function markPickedUp(orderId) {
-  await api.put(`/orders/${orderId}/pickup`);
-  await fetchDeliveryData();
-}
+  const placeOrder = useCallback(async (cartData) => {
+    const response = await api.post("/orders", {
+      restaurant: cartData.restaurantId,
+      deliveryAddress: cartData.deliveryAddress,
+      latitude: cartData.latitude,
+      longitude: cartData.longitude,
+      items: cartData.items,
+      paymentMethod: cartData.paymentMethod,
+    });
+    return response.data;
+  }, []);
 
-async function cancelAssignedOrder(orderId, reason, note) {
-  await api.put(`/orders/${orderId}/cancel-delivery`, { reason, note });
-  await fetchDeliveryData();
-}
+  const verifyPayment = useCallback(async (orderId, paymentData) => {
+    const response = await api.post(`/orders/${orderId}/verify-payment`, paymentData);
+    return response.data;
+  }, []);
 
-async function cancelOrder(orderId, reason, note, page = 1) {
-  const response = await api.put(`/orders/${orderId}/cancel`, { reason, note });
-  await fetchMyOrders(page);
-  return response.data;
-}
+  const markPickedUp = useCallback(async (orderId) => {
+    await api.put(`/orders/${orderId}/pickup`);
+    await fetchDeliveryData();
+  }, [fetchDeliveryData]);
 
-  return (
-    <OrderContext.Provider
-      value={{
-        markPickedUp,
-        cancelAssignedOrder,
-        cancelOrder,
-        verifyPayment,
-        placeOrder,
-        myOrders,
-        myOrdersPagination,
-        loading,
-        error,
-        fetchMyOrders,
-        placeOrder,
-        availableOrders,
-        myDeliveries,
-        deliveryLoading,
-        deliveryError,
-        fetchDeliveryData,
-        acceptOrder,
-        markDelivered,
-        allOrders,
-        allOrdersPagination,
-        adminOrdersLoading,
-        adminOrdersError,
-        fetchAllOrders,
-        advanceOrderStatus,
-        removeAvailableOrderLocally,
-      }}
-    >
-      {children}
-    </OrderContext.Provider>
-  );
+  const cancelAssignedOrder = useCallback(async (orderId, reason, note) => {
+    await api.put(`/orders/${orderId}/cancel-delivery`, { reason, note });
+    await fetchDeliveryData();
+  }, [fetchDeliveryData]);
+
+  const cancelOrder = useCallback(async (orderId, reason, note, page = 1) => {
+    const response = await api.put(`/orders/${orderId}/cancel`, { reason, note });
+    await fetchMyOrders(page);
+    return response.data;
+  }, [fetchMyOrders]);
+
+  const value = useMemo(() => ({
+    markPickedUp, cancelAssignedOrder, cancelOrder, verifyPayment, placeOrder,
+    myOrders, myOrdersPagination, loading, error, fetchMyOrders,
+    availableOrders, myDeliveries, deliveryLoading, deliveryError, fetchDeliveryData,
+    acceptOrder, markDelivered,
+    allOrders, allOrdersPagination, adminOrdersLoading, adminOrdersError,
+    fetchAllOrders, advanceOrderStatus, removeAvailableOrderLocally,
+  }), [
+    markPickedUp, cancelAssignedOrder, cancelOrder, verifyPayment, placeOrder,
+    myOrders, myOrdersPagination, loading, error, fetchMyOrders,
+    availableOrders, myDeliveries, deliveryLoading, deliveryError, fetchDeliveryData,
+    acceptOrder, markDelivered,
+    allOrders, allOrdersPagination, adminOrdersLoading, adminOrdersError,
+    fetchAllOrders, advanceOrderStatus, removeAvailableOrderLocally,
+  ]);
+
+  return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;
 }
 
 export function useOrders() {
   const context = useContext(OrderContext);
-  if (!context) {
-    throw new Error("useOrders must be used inside an OrderProvider");
-  }
+  if (!context) throw new Error("useOrders must be used inside an OrderProvider");
   return context;
 }

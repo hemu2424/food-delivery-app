@@ -9,11 +9,10 @@ import { useOrders } from "@/context/OrderContext";
 import CancelOrderModal from "@/components/shared/CancelOrderModal";
 
 function MyOrdersContent() {
-  const { myOrders, myOrdersPagination, loading, error, fetchMyOrders } = useOrders();
+  const { myOrders, myOrdersPagination, loading, error, fetchMyOrders, cancelOrder } = useOrders();
   const [currentPage, setCurrentPage] = useState(1);
   const [cancelTarget, setCancelTarget] = useState(null); // order._id
-const [cancelling, setCancelling] = useState(false);
-const { cancelOrder } = useOrders(); // already destructure other fields too
+  const [cancelling, setCancelling] = useState(false);
 const CANCEL_REASONS = [
   "Changed my mind",
   "Ordered by mistake",
