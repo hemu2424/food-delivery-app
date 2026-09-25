@@ -19,25 +19,17 @@ function parseTokenFromCookieHeader(cookieHeader) {
 function initSocket(io) {
   ioInstance = io;
 
- io.use(async (socket, next) => {
+io.use(async (socket, next) => {
   try {
     const rawCookies = socket.handshake.headers.cookie;
     let token = parseTokenFromCookieHeader(rawCookies);
-    if (!token && socket.handshake.auth?.token) {
-      token = socket.handshake.auth.token;
-    }
-    if (!token && socket.handshake.headers?.authorization && socket.handshake.headers.authorization.startsWith("Bearer ")) {
-      token = socket.handshake.headers.authorization.split(" ")[1];
-    }
 
     if (!token) {
       return next(new Error("Not authorized — no token found"));
     }
-    console.log("3")
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await Users.findById(decoded.id).select("-password");
-    console.log("4")
 
     if (!user || user.isBlocked) {
       return next(new Error("Not authorized"));

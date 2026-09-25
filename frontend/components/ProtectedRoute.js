@@ -34,6 +34,10 @@ export default function ProtectedRoute({children,allowedRoles}){
         );
     }
 
+    if (!user) {
+        return null;
+    }
+
     if (allowedRoles && !allowedRoles.includes(user.role)) {
         return null;
     }

@@ -20,7 +20,7 @@ export function SocketProvider({ children }) {
     [showToast]
   );
 
-  useEffect(() => {
+useEffect(() => {
     if (!user) {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -30,11 +30,9 @@ export function SocketProvider({ children }) {
     }
 
     const socketUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const newSocket = io(socketUrl, {
       withCredentials: true,
       autoConnect: true,
-      auth: { token },
     });
     socketRef.current = newSocket;
 
@@ -62,7 +60,7 @@ export function SocketProvider({ children }) {
         socketRef.current = null;
       }
     };
-  }, [user, showOrderStatusToast]);
+}, [user, showOrderStatusToast]);
 
   return <SocketContext.Provider value={{ socket: user ? socket : null }}>{children}</SocketContext.Provider>;
 }

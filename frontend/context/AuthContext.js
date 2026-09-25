@@ -11,66 +11,54 @@ export function AuthProvider({children}){
     const [loading,setLoading] = useState(true);
     const router = useRouter();
 
-    useEffect(() => {
-        let isActive = true;
+useEffect(() => {
+    let isActive = true;
 
-        async function checkAuth() {
-            try {
-                const response = await api.get("/auth/me");
-                if (isActive) {
-                  setUser(response.data.user ?? response.data);
-                }
-            } catch (error) {
-                if (isActive) {
-                  if (error.response?.status === 401) {
-                    if (typeof window !== "undefined") {
-                      localStorage.removeItem("token");
-                    }
-                  }
-                  setUser(null);
-                }
-            } finally {
-                if (isActive) {
-                  setLoading(false);
-                }
+    async function checkAuth() {
+        try {
+            const response = await api.get("/auth/me");
+            if (isActive) {
+              setUser(response.data.user ?? response.data);
+            }
+        } catch (error) {
+            if (isActive) {
+              setUser(null);
+            }
+        } finally {
+            if (isActive) {
+              setLoading(false);
             }
         }
+    }
 
-        checkAuth();
+    checkAuth();
 
-        return () => {
-            isActive = false;
-        };
-    }, []);
+    return () => {
+      isActive = false;
+    };
+}, []);
 
 
-  async function login(email, password) {
+ async function login(email, password) {
     try {
       const response = await api.post("/auth/login", { email, password });
-      if (response.data.token && typeof window !== "undefined") {
-        localStorage.setItem("token", response.data.token);
-      }
       setUser(response.data.user);
       redirectByRole(response.data.user.role);
       return response.data.user;
     } catch (error) {
-    
       if (error.response?.data?.requiresVerification) {
         router.push(`/verify-email?email=${encodeURIComponent(error.response.data.email)}`);
       }
-      throw error; 
+      throw error;
     }
-  }
+}
 
-    async function verifyEmail(email, otp) {
+async function verifyEmail(email, otp) {
     const response = await api.post("/auth/verify-email", { email, otp });
-    if (response.data.token && typeof window !== "undefined") {
-      localStorage.setItem("token", response.data.token);
-    }
     setUser(response.data.user);
     redirectByRole(response.data.user.role);
     return response.data.user;
-  }
+}
 
   async function resendOtp(email) {
     const response = await api.post("/auth/resend-otp", { email });
@@ -84,19 +72,16 @@ export function AuthProvider({children}){
     router.push(`/verify-email?email=${encodeURIComponent(response.data.email)}`);
     return response.data;
   }
-  async function logout() {
+async function logout() {
     try {
       await api.post("/auth/logout");
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("token");
-      }
       setUser(null);
       router.replace("/login");
     }
-  }
+}
 
 function redirectByRole(role){
   const target = role === "admin"

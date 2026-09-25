@@ -36,32 +36,49 @@ async function getCuisines(req, res, next) {
   }
 }
 
+const RESTAURANT_LIST_CACHE_TTL_SECONDS = 60;
+
+function buildRestaurantListCacheKey(query) {
+  const { search = "", cuisine = "", page = "1", limit = "10" } = query;
+  return `restaurants:list:${search.toLowerCase()}:${cuisine.toLowerCase()}:${page}:${limit}`;
+}
+
 async function getRestaurants(req, res, next) {
   try {
     const { search, cuisine } = req.query;
     const { page, limit, skip } = getPaginationParams(req);
-    
-const [restaurants, totalRestaurants] = await Promise.all([
+
+    const cacheKey = buildRestaurantListCacheKey(req.query);
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.json(JSON.parse(cached));
+    }
+
+    const [restaurants, totalRestaurants] = await Promise.all([
       Restaurant.find({
-    isActive: true,
-    ...(search && { name: { $regex: search, $options: "i" } }),
-    ...(cuisine && { cuisine: { $regex: cuisine, $options: "i" } }),
-  })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit),
+        isActive: true,
+        ...(search && { name: { $regex: search, $options: "i" } }),
+        ...(cuisine && { cuisine: { $regex: cuisine, $options: "i" } }),
+      })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
 
-  Restaurant.countDocuments({
-    isActive: true,
-    ...(search && { name: { $regex: search, $options: "i" } }),
-    ...(cuisine && { cuisine: { $regex: cuisine, $options: "i" } }),
-  }),
-]);
+      Restaurant.countDocuments({
+        isActive: true,
+        ...(search && { name: { $regex: search, $options: "i" } }),
+        ...(cuisine && { cuisine: { $regex: cuisine, $options: "i" } }),
+      }),
+    ]);
 
-    res.json({
+    const responseBody = {
       restaurants,
       pagination: { page, limit, totalRestaurants, totalPages: Math.ceil(totalRestaurants / limit) },
-    });
+    };
+
+    await redis.set(cacheKey, JSON.stringify(responseBody), "EX", RESTAURANT_LIST_CACHE_TTL_SECONDS);
+
+    res.json(responseBody);
   } catch (error) {
     next(error);
   }

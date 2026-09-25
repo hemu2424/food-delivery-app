@@ -1,6 +1,8 @@
 import Order from "../models/Order.js";
 import Restaurants from "../models/Restaurant.js";
 import { Users } from "../models/Users.js";
+import { invalidateCachedUser } from "../utils/userCache.js";
+
 
 
 
@@ -48,7 +50,6 @@ async function getAllDeliveryPartners(req, res, next) {
   }
 }
 
-
 async function toggleBlockUser(req, res, next) {
   try {
     const user = await Users.findById(req.params.id);
@@ -63,6 +64,7 @@ async function toggleBlockUser(req, res, next) {
 
     user.isBlocked = !user.isBlocked;
     await user.save();
+    await invalidateCachedUser(user._id);
 
     res.json({ message: `User is now ${user.isBlocked ? "blocked" : "unblocked"}`, user });
   } catch (error) {
@@ -80,6 +82,7 @@ async function approveDeliveryPartner(req, res, next) {
 
     partner.isApproved = true;
     await partner.save();
+    await invalidateCachedUser(partner._id);
 
     res.json({ message: "Delivery partner approved", partner });
   } catch (error) {

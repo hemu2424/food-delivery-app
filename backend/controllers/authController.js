@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { Users } from "../models/Users.js";
 import { generateOtp, hashOtp } from "../utils/otp.js";
 import eventEmitter from "../events/eventEmitter.js";
+import {invalidateCachedUser} from "../utils/userCache.js";
 
 function generateToken(user) {
   return jwt.sign(
@@ -106,6 +107,7 @@ async function verifyEmail(req, res, next) {
     user.emailOtp = null;
     user.emailOtpExpires = null;
     await user.save();
+    await invalidateCachedUser(user._id);
 
     const token = generateToken(user);
     setTokenCookie(res, token);
@@ -288,6 +290,7 @@ async function updateProfile(req, res, next) {
     }
 
     await user.save();
+    await invalidateCachedUser(user._id);
 
     res.json({
       id: user._id,
@@ -315,6 +318,7 @@ async function changePassword(req, res, next) {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
+    await invalidateCachedUser(user._id);
 
     res.json({ message: "Password changed successfully" });
   } catch (error) {
