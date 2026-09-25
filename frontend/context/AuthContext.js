@@ -1,6 +1,6 @@
 "use client"
 
-import api from "@/lib/api";
+import api, { clearAuthToken, saveAuthToken } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 
@@ -42,6 +42,7 @@ useEffect(() => {
  async function login(email, password) {
     try {
       const response = await api.post("/auth/login", { email, password });
+      saveAuthToken(response.data.token);
       setUser(response.data.user);
       redirectByRole(response.data.user.role);
       return response.data.user;
@@ -55,6 +56,7 @@ useEffect(() => {
 
 async function verifyEmail(email, otp) {
     const response = await api.post("/auth/verify-email", { email, otp });
+    saveAuthToken(response.data.token);
     setUser(response.data.user);
     redirectByRole(response.data.user.role);
     return response.data.user;
@@ -78,6 +80,7 @@ async function logout() {
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
+      clearAuthToken();
       setUser(null);
       router.replace("/login");
     }
