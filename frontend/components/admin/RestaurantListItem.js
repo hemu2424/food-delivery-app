@@ -1,11 +1,11 @@
+// components/admin/RestaurantListItem.js
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRestaurants } from "@/context/RestaurantContext";
 import ImageGallery from "@/components/shared/ImageGallery";
-import { fileUrl } from "@/lib/fileUrl";
 
 const MenuItemForm = dynamic(() => import("./MenuItemForm"), {
   loading: () => <p className="text-gray-400 text-sm">Loading...</p>,
@@ -14,7 +14,7 @@ const RestaurantForm = dynamic(() => import("./RestaurantForm"), {
   loading: () => <p className="text-gray-400 text-sm">Loading form...</p>,
 });
 
-export default function RestaurantListItem({ restaurant }) {
+function RestaurantListItem({ restaurant }) {
   const { deleteRestaurant, deleteRestaurantImage } = useRestaurants();
   const [showMenuForm, setShowMenuForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -68,3 +68,5 @@ export default function RestaurantListItem({ restaurant }) {
     </div>
   );
 }
+
+export default memo(RestaurantListItem);

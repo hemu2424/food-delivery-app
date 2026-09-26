@@ -1,9 +1,10 @@
+// components/user/MenuItemCard.js
 "use client";
 
+import { memo } from "react";
 import Image from "next/image";
-import { fileUrl } from "@/lib/fileUrl";
 
-export default function MenuItemCard({ item, onAdd }) {
+function MenuItemCard({ item, onAdd }) {
   const thumbnail = item.images?.[0];
 
   return (
@@ -11,17 +12,9 @@ export default function MenuItemCard({ item, onAdd }) {
       <div className="flex items-center gap-4">
         <div className="relative w-16 h-16 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
           {thumbnail ? (
-            <Image
-              src={thumbnail}
-              alt={item.name}
-              fill
-              sizes="64px"
-              className="object-cover"
-            />
+            <Image src={thumbnail} alt={item.name} fill sizes="64px" className="object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
-              No image
-            </div>
+            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No image</div>
           )}
         </div>
         <div>
@@ -35,3 +28,5 @@ export default function MenuItemCard({ item, onAdd }) {
     </div>
   );
 }
+
+export default memo(MenuItemCard);

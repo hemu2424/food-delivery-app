@@ -1,14 +1,23 @@
+// app/delivery/dashboard/page.js
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import OrderStatusBadge from "@/components/user/OrderStatusBadge";
 import { useOrders } from "@/context/OrderContext";
 import { useAuth } from "@/context/AuthContext";
 import { useOrderClaimedListener } from "@/hooks/useOrderClaimedListener";
 import CancelOrderModal from "@/components/shared/CancelOrderModal";
 import { useOrderUnassignedListener } from "@/hooks/useOrderUnassignedListener";
-import { useState } from "react";
+import AvailableOrderCard from "@/components/delivery/AvailableOrderCard";
+import DeliveryOrderCard from "@/components/delivery/DeliveryOrderCard";
+
+const DELIVERY_CANCEL_REASONS = [
+  "Restaurant is closed",
+  "Unable to reach the location in time",
+  "Vehicle breakdown",
+  "Restaurant is not ready",
+  "Other",
+];
 
 export default function DeliveryDashboardPage() {
   const { user } = useAuth();
@@ -26,28 +35,33 @@ export default function DeliveryDashboardPage() {
     }
   }, [user, fetchDeliveryData]);
 
-  const handleUnassigned = useCallback(
-    (update) => {
-      fetchDeliveryData();
-    },
-    [fetchDeliveryData]
-  );
+  const handleUnassigned = useCallback(() => {
+    fetchDeliveryData();
+  }, [fetchDeliveryData]);
   useOrderUnassignedListener(handleUnassigned);
+
   const handleOrderClaimed = useCallback(
     (update) => {
       removeAvailableOrderLocally(update.orderId);
     },
     [removeAvailableOrderLocally]
   );
-  const DELIVERY_CANCEL_REASONS = [
-  "Restaurant is closed",
-  "Unable to reach the location in time",
-  "Vehicle breakdown",
-  "Restaurant is not ready",
-  "Other",
-];
-
   useOrderClaimedListener(handleOrderClaimed);
+
+  const handleConfirmCancel = useCallback(
+    async (reason, note) => {
+      setCancelling(true);
+      try {
+        await cancelAssignedOrder(cancelTarget, reason, note);
+        setCancelTarget(null);
+      } finally {
+        setCancelling(false);
+      }
+    },
+    [cancelAssignedOrder, cancelTarget]
+  );
+
+  const handleCloseCancelModal = useCallback(() => setCancelTarget(null), []);
 
   if (user && !user.isApproved) {
     return (
@@ -73,21 +87,7 @@ export default function DeliveryDashboardPage() {
         )}
         <div className="space-y-3 max-w-lg">
           {availableOrders.map((order) => (
-            <div key={order._id} className="bg-white border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-medium">{order.restaurant?.name}</p>
-                <OrderStatusBadge status={order.status} />
-              </div>
-              <p className="text-sm text-gray-500 mb-3">
-                Deliver to: {order.deliveryAddress}
-              </p>
-              <button
-                onClick={() => acceptOrder(order._id)}
-                className="bg-orange-600 text-white text-sm px-3 py-2 rounded-md hover:bg-orange-700"
-              >
-                Accept Delivery
-              </button>
-            </div>
+            <AvailableOrderCard key={order._id} order={order} onAccept={acceptOrder} />
           ))}
         </div>
       </section>
@@ -99,59 +99,23 @@ export default function DeliveryDashboardPage() {
         )}
         <div className="space-y-3 max-w-lg">
           {myDeliveries.map((order) => (
-            <div key={order._id} className="bg-white border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-medium">{order.restaurant?.name}</p>
-                <OrderStatusBadge status={order.status} />
-              </div>
-              <p className="text-sm text-gray-500 mb-1">
-                Customer: {order.user?.name} · {order.user?.phone}
-              </p>
-              <p className="text-sm text-gray-500 mb-3">
-                Deliver to: {order.deliveryAddress}
-              </p>
-                           {order.status === "preparing" && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => markPickedUp(order._id)}
-                    className="bg-orange-600 text-white text-sm px-3 py-2 rounded-md hover:bg-orange-700"
-                  >
-                    Mark Picked Up
-                  </button>
-                  <button
-                    onClick={() => setCancelTarget(order._id)}
-                    className="text-sm text-red-600 border border-red-600 px-3 py-2 rounded-md hover:bg-red-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-              {order.status === "out_for_delivery" && (
-                <button
-                  onClick={() => markDelivered(order._id)}
-                  className="bg-green-600 text-white text-sm px-3 py-2 rounded-md hover:bg-green-700"
-                >
-                  Mark as Delivered
-                </button>
-              )}
-            </div>
+            <DeliveryOrderCard
+              key={order._id}
+              order={order}
+              onMarkPickedUp={markPickedUp}
+              onCancelRequest={setCancelTarget}
+              onMarkDelivered={markDelivered}
+            />
           ))}
         </div>
       </section>
-            <CancelOrderModal
+
+      <CancelOrderModal
         isOpen={!!cancelTarget}
-        onClose={() => setCancelTarget(null)}
+        onClose={handleCloseCancelModal}
         loading={cancelling}
         reasons={DELIVERY_CANCEL_REASONS}
-        onConfirm={async (reason, note) => {
-          setCancelling(true);
-          try {
-            await cancelAssignedOrder(cancelTarget, reason, note);
-            setCancelTarget(null);
-          } finally {
-            setCancelling(false);
-          }
-        }}
+        onConfirm={handleConfirmCancel}
       />
     </ProtectedRoute>
   );
