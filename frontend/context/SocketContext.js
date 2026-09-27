@@ -32,7 +32,6 @@ export function SocketProvider({ children }) {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
-      setSocket(null);
       return;
     }
 
@@ -53,18 +52,12 @@ export function SocketProvider({ children }) {
     };
 
     const handleDisconnect = () => {
-      // keep socket state or update
+      setSocket(null);
     };
 
     newSocket.on("connect_error", handleConnectError);
     newSocket.on("connect", handleConnect);
     newSocket.on("disconnect", handleDisconnect);
-
-    if (newSocket.connected) {
-      setSocket(newSocket);
-    } else {
-      setSocket(newSocket);
-    }
 
     if (userRole === "user") {
       newSocket.on("order:statusUpdated", showOrderStatusToast);
@@ -85,7 +78,7 @@ export function SocketProvider({ children }) {
 
   const value = useMemo(() => ({ socket: user ? socket : null }), [user, socket]);
 
-return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
+  return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
 }
 
 export function useSocket() {
