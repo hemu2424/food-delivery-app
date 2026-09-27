@@ -1,10 +1,11 @@
+// components/user/RestaurantCard.js
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-
-export default function RestaurantCard({ restaurant }) {
+function RestaurantCard({ restaurant }) {
   const thumbnail = restaurant.images?.[0];
 
   return (
@@ -28,3 +29,5 @@ export default function RestaurantCard({ restaurant }) {
     </Link>
   );
 }
+
+export default memo(RestaurantCard);

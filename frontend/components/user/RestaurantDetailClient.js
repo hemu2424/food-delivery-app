@@ -1,5 +1,7 @@
+// components/user/RestaurantDetailClient.js
 "use client";
 
+import { useCallback } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MenuItemCard from "@/components/user/MenuItemCard";
 import { useCart } from "@/context/CartContext";
@@ -8,9 +10,12 @@ import { groupByCategory } from "@/lib/groupByCategory";
 export default function RestaurantDetailClient({ restaurantId, restaurant, initialMenuItems }) {
   const { addItem } = useCart();
 
-  function handleAddToCart(menuItem) {
-    addItem(restaurantId, restaurant.name, menuItem);
-  }
+  const handleAddToCart = useCallback(
+    (menuItem) => {
+      addItem(restaurantId, restaurant.name, menuItem);
+    },
+    [addItem, restaurantId, restaurant.name]
+  );
 
   const groupedMenu = groupByCategory(initialMenuItems);
   const categories = Object.keys(groupedMenu);

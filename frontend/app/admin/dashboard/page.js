@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAdmin } from "@/context/AdminContext";
+import { useOrderStatusListener } from "@/hooks/useOrderStatusListener";
+import { useOrderCreatedListener } from "@/hooks/useOrderCreatedListener";
 
 export default function AdminDashboardPage() {
   const { stats, statsLoading, fetchStats } = useAdmin();
@@ -10,6 +12,13 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  const handleOrderEvent = useCallback(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  useOrderStatusListener(handleOrderEvent);
+  useOrderCreatedListener(handleOrderEvent);
 
   const cards = stats
     ? [

@@ -50,6 +50,17 @@ async function createOrder(req, res, next) {
     });
 
     if (order.paymentMethod === "cod") {
+      try {
+        const io = getIO();
+        io.to("admins").emit("order:created", { orderId: order._id, order });
+        io.to("admins").emit("order:statusUpdated", { orderId: order._id, status: order.status });
+        io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+          orderId: order._id,
+          status: order.status,
+        });
+      } catch (e) {
+        console.error("Socket emit error on createOrder:", e.message);
+      }
       return res.status(201).json({ order });
     }
 
@@ -87,7 +98,7 @@ async function getMyOrders(req, res, next) {
         .populate("restaurant", "name images")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit).lean(),
       Order.countDocuments({ user: req.user._id }),
     ]);
 
@@ -106,7 +117,8 @@ async function getOrderById(req, res, next) {
     const order = await Order.findById(req.params.id)
       .populate("restaurant", "name address")
       .populate("user", "name phone")
-      .populate("deliveryPartner", "name phone");
+      .populate("deliveryPartner", "name phone")
+      .lean();
       console.log(order)
 
     if (!order) {
@@ -140,7 +152,8 @@ async function getAllOrders(req, res, next) {
         .populate("deliveryPartner", "name")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Order.countDocuments(),
     ]);
 
@@ -189,18 +202,31 @@ async function updateOrderStatus(req, res, next) {
     order.status = status;
     await order.save();
 
+    try {
+      const io = getIO();
+      io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+      });
 
-    const io = getIO();
-    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
-      orderId: order._id,
-      status: order.status,
-    });
+      io.to("admins").emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+      });
 
-  
-    io.to("admins").emit("order:statusUpdated", {
-      orderId: order._id,
-      status: order.status,
-    });
+      if (order.status === "preparing" && !order.deliveryPartner) {
+        io.to("delivery").emit("order:newAvailable", { orderId: order._id });
+      }
+
+      if (order.deliveryPartner) {
+        io.to(`user:${order.deliveryPartner.toString()}`).emit("order:statusUpdated", {
+          orderId: order._id,
+          status: order.status,
+        });
+      }
+    } catch (e) {
+      console.error("Socket emit error on updateOrderStatus:", e.message);
+    }
 
     res.json(order);
   } catch (error) {
@@ -215,7 +241,8 @@ async function getAvailableOrders(req, res, next) {
       deliveryPartner: null,
     })
       .populate("restaurant", "name address")
-      .sort({ createdAt: 1 }); 
+      .sort({ createdAt: 1 })
+      .lean();
 
     res.json(orders);
   } catch (error) {
@@ -228,7 +255,8 @@ async function getMyDeliveries(req, res, next) {
     const orders = await Order.find({ deliveryPartner: req.user._id })
       .populate("restaurant", "name address")
       .populate("user", "name phone address")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json(orders);
   } catch (error) {
@@ -239,7 +267,8 @@ async function downloadInvoice(req, res, next) {
   try {
     const order = await Order.findById(req.params.id)
       .populate("restaurant", "name address")
-      .populate("user", "name phone");
+      .populate("user", "name phone")
+      .lean();
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -290,11 +319,27 @@ async function acceptOrder(req, res, next) {
       }
       return res.status(400).json({ message: "Order is not ready for pickup yet" });
     }
-    const io = getIO();
-    
-
-  
-    io.emit("order:claimed", { orderId: order._id });
+    try {
+      const io = getIO();
+      io.to("delivery").emit("order:claimed", { orderId: order._id });
+      io.to("admins").emit("order:claimed", { orderId: order._id, deliveryPartner: req.user._id });
+      io.to("admins").emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+        deliveryPartner: req.user._id,
+      });
+      io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+        deliveryPartner: {
+          _id: req.user._id,
+          name: req.user.name,
+          phone: req.user.phone,
+        },
+      });
+    } catch (e) {
+      console.error("Socket emit error on acceptOrder:", e.message);
+    }
 
     res.json(order);
   } catch (error) {
@@ -323,15 +368,25 @@ async function markPickedUp(req, res, next) {
     order.pickedUpAt = new Date();
     await order.save();
 
-    const io = getIO();
-    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
-      orderId: order._id,
-      status: order.status,
-    });
-    io.to("admins").emit("order:statusUpdated", {
-      orderId: order._id,
-      status: order.status,
-    });
+    try {
+      const io = getIO();
+      io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+      });
+      io.to("admins").emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+      });
+      if (order.deliveryPartner) {
+        io.to(`user:${order.deliveryPartner.toString()}`).emit("order:statusUpdated", {
+          orderId: order._id,
+          status: order.status,
+        });
+      }
+    } catch (e) {
+      console.error("Socket emit error on markPickedUp:", e.message);
+    }
 
     res.json(order);
   } catch (error) {
@@ -385,15 +440,32 @@ async function cancelOrder(req, res, next) {
       }
     }
 
-    const io = getIO();
-    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
-      orderId: order._id,
-      status: order.status,
-    });
-    io.to("admins").emit("order:statusUpdated", {
-      orderId: order._id,
-      status: order.status,
-    });
+    try {
+      const io = getIO();
+      io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+      });
+      io.to("admins").emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+      });
+      io.to("delivery").emit("order:cancelled", {
+        orderId: order._id,
+      });
+
+      if (orderCheck.deliveryPartner) {
+        io.to(`user:${orderCheck.deliveryPartner.toString()}`).emit("order:cancelled", {
+          orderId: order._id,
+        });
+        io.to(`user:${orderCheck.deliveryPartner.toString()}`).emit("order:statusUpdated", {
+          orderId: order._id,
+          status: order.status,
+        });
+      }
+    } catch (e) {
+      console.error("Socket emit error on cancelOrder:", e.message);
+    }
 
     res.json(order);
   } catch (error) {
@@ -427,12 +499,20 @@ async function cancelAssignedOrder(req, res, next) {
     // status stays "preparing" — it goes back into the available pool
     await order.save();
 
-    const io = getIO();
-    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
-      orderId: order._id,
-      status: order.status,
-    });
-    io.emit("order:unassigned", { orderId: order._id, order });
+    try {
+      const io = getIO();
+      io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+        orderId: order._id,
+        status: order.status,
+        deliveryPartner: null,
+      });
+      io.to("admins").emit("order:unassigned", { orderId: order._id, order });
+      io.to("admins").emit("order:statusUpdated", { orderId: order._id, status: order.status });
+      io.to("delivery").emit("order:unassigned", { orderId: order._id, order });
+      io.to("delivery").emit("order:newAvailable", { orderId: order._id });
+    } catch (e) {
+      console.error("Socket emit error on cancelAssignedOrder:", e.message);
+    }
 
     res.json({ message: "You've backed out of this delivery. It's back in the pool." });
   } catch (error) {

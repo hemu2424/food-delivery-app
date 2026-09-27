@@ -9,7 +9,7 @@ function parseTokenFromCookieHeader(cookieHeader) {
 
   const cookies = cookieHeader.split(";").reduce((acc, pair) => {
     const [key, ...valueParts] = pair.trim().split("=");
-    acc[key] = decodeURIComponent(valueParts.join("="));
+    if (key) acc[key.trim()] = decodeURIComponent(valueParts.join("="));
     return acc;
   }, {});
 
@@ -19,39 +19,50 @@ function parseTokenFromCookieHeader(cookieHeader) {
 function initSocket(io) {
   ioInstance = io;
 
-io.use(async (socket, next) => {
-  try {
-    const rawCookies = socket.handshake.headers.cookie;
-    let token = parseTokenFromCookieHeader(rawCookies);
+  io.use(async (socket, next) => {
+    try {
+      const rawCookies = socket.handshake.headers.cookie;
+      let token = parseTokenFromCookieHeader(rawCookies);
 
-    if (!token) {
-      return next(new Error("Not authorized — no token found"));
+      if (!token && socket.handshake.auth?.token) {
+        token = socket.handshake.auth.token;
+      }
+
+      if (!token && socket.handshake.headers.authorization && socket.handshake.headers.authorization.startsWith("Bearer ")) {
+        token = socket.handshake.headers.authorization.split(" ")[1];
+      }
+
+      if (!token) {
+        return next(new Error("Not authorized — no token found"));
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await Users.findById(decoded.id).select("-password");
+
+      if (!user || user.isBlocked || !user.isEmailVerified) {
+        return next(new Error("Not authorized"));
+      }
+
+      socket.user = user;
+      next();
+    } catch (error) {
+      console.error("Socket auth error:", error.message);
+      next(new Error("Not authorized — invalid token"));
     }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await Users.findById(decoded.id).select("-password");
-
-    if (!user || user.isBlocked) {
-      return next(new Error("Not authorized"));
-    }
-
-    socket.user = user;
-    next();
-  } catch (error) {
-    console.error("Socket auth error:", error.message);
-    next(new Error("Not authorized — invalid token"));
-  }
-});
+  });
 
   io.on("connection", (socket) => {
     console.log(`Socket connected: ${socket.user.name} (${socket.user.role})`);
 
-   
-    socket.join(`user:${socket.user._id}`);
+    const userIdStr = socket.user._id.toString();
+    socket.join(`user:${userIdStr}`);
 
-    
     if (socket.user.role === "admin") {
       socket.join("admins");
+    }
+
+    if (socket.user.role === "delivery") {
+      socket.join("delivery");
     }
 
     socket.on("disconnect", () => {
@@ -59,7 +70,6 @@ io.use(async (socket, next) => {
     });
   });
 }
-
 
 function getIO() {
   if (!ioInstance) {

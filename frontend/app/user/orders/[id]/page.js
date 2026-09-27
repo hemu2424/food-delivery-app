@@ -58,12 +58,18 @@ const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
 
   const handleStatusUpdate = useCallback(
     (update) => {
-      if (update.orderId === id) {
-        setOrder((prevOrder) => (prevOrder ? { ...prevOrder, status: update.status } : prevOrder));
-        showToast(`Order status updated: ${update.status.replace(/_/g, " ")}`);
+      if (String(update?.orderId) === String(id)) {
+        setOrder((prevOrder) => {
+          if (!prevOrder) return prevOrder;
+          return {
+            ...prevOrder,
+            status: update.status || prevOrder.status,
+            ...(update.deliveryPartner !== undefined ? { deliveryPartner: update.deliveryPartner } : {}),
+          };
+        });
       }
     },
-    [id, showToast]
+    [id]
   );
 
   useOrderStatusListener(handleStatusUpdate);

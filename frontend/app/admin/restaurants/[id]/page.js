@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRestaurants } from "@/context/RestaurantContext";
 import MenuItemList from "@/components/admin/MenuItemList";
-import MenuItemForm from "@/components/admin/MenuItemForm";
 import { fileUrl } from "@/lib/fileUrl";
 
+const MenuItemForm = dynamic(() => import("@/components/admin/MenuItemForm"), {
+  loading: () => <p className="text-gray-400 text-sm">Loading form...</p>,
+});
 export default function AdminRestaurantDetailPage() {
   const [showMenuForm, setShowMenuForm] = useState(false);
   const { id } = useParams();

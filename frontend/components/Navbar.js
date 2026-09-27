@@ -77,7 +77,6 @@ export default function Navbar() {
                     alt={user.name || "User avatar"}
                     width={24}
                     height={24}
-                    unoptimized
                     className="w-6 h-6 rounded-full object-cover"
                   />
                 ) : (

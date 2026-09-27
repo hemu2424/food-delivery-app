@@ -3,33 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "next dev --webpack",
-  "dev:user": "cross-env NEXT_DIST_DIR=.next-user next dev --webpack -p 3000",
-  "dev:delivery": "cross-env NEXT_DIST_DIR=.next-delivery next dev --webpack -p 3001",
-  "dev:admin": "cross-env NEXT_DIST_DIR=.next-admin next dev --webpack -p 3002",
-  "dev:all": "concurrently \"npm run dev:user\" \"npm run dev:delivery\" \"npm run dev:admin\"",
-
-  "build": "next build",
-  "build:user": "cross-env NEXT_DIST_DIR=.next-user next build",
-  "build:delivery": "cross-env NEXT_DIST_DIR=.next-delivery next build",
-  "build:admin": "cross-env NEXT_DIST_DIR=.next-admin next build",
-  "build:all": "npm run build:user && npm run build:delivery && npm run build:admin",
-
-  "start": "next start",
-  "start:user": "cross-env NEXT_DIST_DIR=.next-user next start -p 3000",
-  "start:delivery": "cross-env NEXT_DIST_DIR=.next-delivery next start -p 3001",
-  "start:admin": "cross-env NEXT_DIST_DIR=.next-admin next start -p 3002",
-  "start:all": "concurrently \"npm run start:user\" \"npm run start:delivery\" \"npm run start:admin\"",
-
-  "lint": "eslint"
-},
+    "dev": "next dev --webpack",
+    "dev:user": "cross-env NEXT_DIST_DIR=.next-user next dev --webpack -p 3000",
+    "dev:delivery": "cross-env NEXT_DIST_DIR=.next-delivery next dev --webpack -p 3001",
+    "dev:admin": "cross-env NEXT_DIST_DIR=.next-admin next dev --webpack -p 3002",
+    "dev:all": "concurrently \"npm run dev:user\" \"npm run dev:delivery\" \"npm run dev:admin\"",
+    "build": "next build",
+    "build:user": "cross-env NEXT_DIST_DIR=.next-user next build",
+    "build:delivery": "cross-env NEXT_DIST_DIR=.next-delivery next build",
+    "build:admin": "cross-env NEXT_DIST_DIR=.next-admin next build",
+    "build:all": "npm run build:user && npm run build:delivery && npm run build:admin",
+    "start": "next start",
+    "start:user": "cross-env NEXT_DIST_DIR=.next-user next start -p 3000",
+    "start:delivery": "cross-env NEXT_DIST_DIR=.next-delivery next start -p 3001",
+    "start:admin": "cross-env NEXT_DIST_DIR=.next-admin next start -p 3002",
+    "start:all": "concurrently \"npm run start:user\" \"npm run start:delivery\" \"npm run start:admin\"",
+    "lint": "eslint"
+  },
   "dependencies": {
     "axios": "^1.19.0",
-    "next": "16.3.0",
+    "js-yaml": "^4.3.2",
+    "next": "^16.3.3",
     "postcss": "^8.5.28",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "socket.io-client": "^4.8.3"
+    "sharp": "^0.35.4",
+    "socket.io-client": "^4.8.3",
+    "swr": "^2.5.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

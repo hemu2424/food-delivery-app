@@ -35,13 +35,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}   # passed at BUILD time
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: food-delivery-frontend
     restart: unless-stopped
     tty: true
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}   # also fine to keep here, harmless but not sufficient alone
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}

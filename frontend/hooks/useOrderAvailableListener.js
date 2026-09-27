@@ -3,13 +3,13 @@
 import { useEffect, useRef } from "react";
 import { useSocket } from "@/context/SocketContext";
 
-export function useOrderUnassignedListener(onUnassigned) {
+export function useOrderAvailableListener(onNewAvailable) {
   const { socket } = useSocket();
-  const callbackRef = useRef(onUnassigned);
+  const callbackRef = useRef(onNewAvailable);
 
   useEffect(() => {
-    callbackRef.current = onUnassigned;
-  }, [onUnassigned]);
+    callbackRef.current = onNewAvailable;
+  }, [onNewAvailable]);
 
   useEffect(() => {
     if (!socket) return;
@@ -20,10 +20,10 @@ export function useOrderUnassignedListener(onUnassigned) {
       }
     };
 
-    socket.on("order:unassigned", handler);
+    socket.on("order:newAvailable", handler);
 
     return () => {
-      socket.off("order:unassigned", handler);
+      socket.off("order:newAvailable", handler);
     };
   }, [socket]);
 }

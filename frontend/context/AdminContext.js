@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -12,7 +12,6 @@ export function AdminProvider({ children }) {
   const [deliveryPartners, setDeliveryPartners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
@@ -41,37 +40,35 @@ export function AdminProvider({ children }) {
       setDeliveryPartners(partnersRes.data);
       setError("");
     } catch (err) {
-      if (err.response?.status !== 401) {
-        setError("Could not load users.");
-      }
+      if (err.response?.status !== 401) setError("Could not load users.");
     } finally {
       setLoading(false);
     }
   }, [user]);
 
-  async function toggleBlockUser(userId) {
+  const toggleBlockUser = useCallback(async (userId) => {
     await api.put(`/admin/users/${userId}/block`);
     await fetchUsers();
-  }
+  }, [fetchUsers]);
 
-  async function approveDeliveryPartner(partnerId) {
+  const approveDeliveryPartner = useCallback(async (partnerId) => {
     await api.put(`/admin/delivery-partners/${partnerId}/approve`);
     await fetchUsers();
-  }
+  }, [fetchUsers]);
 
-  return (
-    <AdminContext.Provider
-      value={{ customers, deliveryPartners, loading, error, fetchUsers, toggleBlockUser, approveDeliveryPartner ,stats, statsLoading, fetchStats}}
-    >
-      {children}
-    </AdminContext.Provider>
-  );
+  const value = useMemo(() => ({
+    customers, deliveryPartners, loading, error, fetchUsers,
+    toggleBlockUser, approveDeliveryPartner, stats, statsLoading, fetchStats
+  }), [
+    customers, deliveryPartners, loading, error, fetchUsers,
+    toggleBlockUser, approveDeliveryPartner, stats, statsLoading, fetchStats
+  ]);
+
+  return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }
 
 export function useAdmin() {
   const context = useContext(AdminContext);
-  if (!context) {
-    throw new Error("useAdmin must be used inside an AdminProvider");
-  }
+  if (!context) throw new Error("useAdmin must be used inside an AdminProvider");
   return context;
 }

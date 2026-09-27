@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { io } from "socket.io-client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useMemo } from "react";
 
 const SocketContext = createContext(null);
 
@@ -15,13 +16,18 @@ export function SocketProvider({ children }) {
 
   const showOrderStatusToast = useCallback(
     (update) => {
-      showToast(`Your order is now: ${update.status.replace(/_/g, " ")}`);
+      if (update?.status) {
+        showToast(`Your order is now: ${update.status.replace(/_/g, " ")}`);
+      }
     },
     [showToast]
   );
 
-useEffect(() => {
-    if (!user) {
+  const userId = user?._id || user?.id;
+  const userRole = user?.role;
+
+  useEffect(() => {
+    if (!userId) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -33,6 +39,7 @@ useEffect(() => {
     const newSocket = io(socketUrl, {
       withCredentials: true,
       autoConnect: true,
+      transports: ["websocket", "polling"],
     });
     socketRef.current = newSocket;
 
@@ -44,25 +51,34 @@ useEffect(() => {
       setSocket(newSocket);
     };
 
+    const handleDisconnect = () => {
+      setSocket(null);
+    };
+
     newSocket.on("connect_error", handleConnectError);
     newSocket.on("connect", handleConnect);
+    newSocket.on("disconnect", handleDisconnect);
 
-    if (user.role === "user") {
+    if (userRole === "user") {
       newSocket.on("order:statusUpdated", showOrderStatusToast);
     }
 
     return () => {
       newSocket.off("connect", handleConnect);
+      newSocket.off("disconnect", handleDisconnect);
       newSocket.off("connect_error", handleConnectError);
       newSocket.off("order:statusUpdated", showOrderStatusToast);
       newSocket.disconnect();
       if (socketRef.current === newSocket) {
         socketRef.current = null;
       }
+      setSocket(null);
     };
-}, [user, showOrderStatusToast]);
+  }, [userId, userRole, showOrderStatusToast]);
 
-  return <SocketContext.Provider value={{ socket: user ? socket : null }}>{children}</SocketContext.Provider>;
+  const value = useMemo(() => ({ socket: user ? socket : null }), [user, socket]);
+
+  return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
 }
 
 export function useSocket() {
