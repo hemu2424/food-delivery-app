@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { SocketProvider } from "@/context/SocketContext";
 import Navbar from "@/components/Navbar";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
@@ -19,10 +20,12 @@ export default function RootLayout({ children }) {
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ToastProvider>
           <AuthProvider>
-            <CartProvider>
-              <Navbar />
-              {children}
-            </CartProvider>
+            <SocketProvider>
+              <CartProvider>
+                <Navbar />
+                {children}
+              </CartProvider>
+            </SocketProvider>
           </AuthProvider>
         </ToastProvider>
       </body>

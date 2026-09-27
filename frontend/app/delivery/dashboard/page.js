@@ -8,6 +8,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useOrderClaimedListener } from "@/hooks/useOrderClaimedListener";
 import CancelOrderModal from "@/components/shared/CancelOrderModal";
 import { useOrderUnassignedListener } from "@/hooks/useOrderUnassignedListener";
+import { useOrderAvailableListener } from "@/hooks/useOrderAvailableListener";
+import { useOrderCancelledListener } from "@/hooks/useOrderCancelledListener";
+import { useOrderStatusListener } from "@/hooks/useOrderStatusListener";
 import AvailableOrderCard from "@/components/delivery/AvailableOrderCard";
 import DeliveryOrderCard from "@/components/delivery/DeliveryOrderCard";
 
@@ -35,6 +38,11 @@ export default function DeliveryDashboardPage() {
     }
   }, [user, fetchDeliveryData]);
 
+  const handleNewAvailable = useCallback(() => {
+    fetchDeliveryData();
+  }, [fetchDeliveryData]);
+  useOrderAvailableListener(handleNewAvailable);
+
   const handleUnassigned = useCallback(() => {
     fetchDeliveryData();
   }, [fetchDeliveryData]);
@@ -42,11 +50,30 @@ export default function DeliveryDashboardPage() {
 
   const handleOrderClaimed = useCallback(
     (update) => {
-      removeAvailableOrderLocally(update.orderId);
+      if (update?.orderId) {
+        removeAvailableOrderLocally(update.orderId);
+      }
+      fetchDeliveryData();
     },
-    [removeAvailableOrderLocally]
+    [removeAvailableOrderLocally, fetchDeliveryData]
   );
   useOrderClaimedListener(handleOrderClaimed);
+
+  const handleOrderCancelled = useCallback(
+    (update) => {
+      if (update?.orderId) {
+        removeAvailableOrderLocally(update.orderId);
+      }
+      fetchDeliveryData();
+    },
+    [removeAvailableOrderLocally, fetchDeliveryData]
+  );
+  useOrderCancelledListener(handleOrderCancelled);
+
+  const handleStatusUpdate = useCallback(() => {
+    fetchDeliveryData();
+  }, [fetchDeliveryData]);
+  useOrderStatusListener(handleStatusUpdate);
 
   const handleConfirmCancel = useCallback(
     async (reason, note) => {

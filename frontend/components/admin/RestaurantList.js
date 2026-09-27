@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRestaurants } from "@/context/RestaurantContext";
+import useSWR from "swr";
+import fetcher from "@/lib/fetcher";
 import RestaurantListItem from "./RestaurantListItem";
 
 export default function RestaurantList() {
-  const { restaurants, loading, error, fetchRestaurants } = useRestaurants();
+  const { data, error: swrError, isLoading } = useSWR("/restaurants", fetcher);
 
-  useEffect(() => {
-    fetchRestaurants();
-  }, [fetchRestaurants]);
+  const restaurants = Array.isArray(data) ? data : data?.restaurants ?? [];
+  const loading = isLoading;
+  const error = swrError ? "Could not fetch restaurants" : "";
 
   if (loading) return <p className="text-gray-400">Loading restaurants...</p>;
   if (error) return <p className="text-red-600">{error}</p>;

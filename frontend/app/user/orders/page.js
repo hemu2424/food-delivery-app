@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
+import fetcher from "@/lib/fetcher";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import OrderStatusBadge from "@/components/user/OrderStatusBadge";
 import Pagination from "@/components/shared/Pagination";
 import { useOrders } from "@/context/OrderContext";
 import CancelOrderModal from "@/components/shared/CancelOrderModal";
+import { useOrderStatusListener } from "@/hooks/useOrderStatusListener";
 
 function MyOrdersContent() {
-  const { myOrders, myOrdersPagination, loading, error, fetchMyOrders, cancelOrder } = useOrders();
+  const { cancelOrder } = useOrders();
   const [currentPage, setCurrentPage] = useState(1);
   const [cancelTarget, setCancelTarget] = useState(null); // order._id
   const [cancelling, setCancelling] = useState(false);
@@ -22,9 +25,20 @@ const CANCEL_REASONS = [
 ];
 const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
 
-  useEffect(() => {
-    fetchMyOrders(currentPage);
-  }, [currentPage, fetchMyOrders]);
+  const { data, error: swrError, isLoading, mutate } = useSWR(
+    `/orders/my?page=${currentPage}`,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+  const handleStatusUpdate = useCallback(() => {
+  mutate();
+}, [mutate]);
+useOrderStatusListener(handleStatusUpdate);
+
+  const myOrders = Array.isArray(data) ? data : data?.orders ?? [];
+  const myOrdersPagination = data?.pagination ?? null;
+  const loading = isLoading;
+  const error = swrError ? "Could not load your orders." : "";
 
   return (
     <>
@@ -66,7 +80,8 @@ const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
   onConfirm={async (reason, note) => {
     setCancelling(true);
     try {
-      await cancelOrder(cancelTarget, reason, note, currentPage);
+      await cancelOrder(cancelTarget, reason, note);
+      await mutate();
       setCancelTarget(null);
     } finally {
       setCancelling(false);

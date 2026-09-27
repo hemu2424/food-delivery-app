@@ -1,33 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
+import useSWR from "swr";
+import fetcher from "@/lib/fetcher";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import OrderStatusBadge from "@/components/user/OrderStatusBadge";
 import Pagination from "@/components/shared/Pagination";
 import { useOrders } from "@/context/OrderContext";
+import { useOrderStatusListener } from "@/hooks/useOrderStatusListener";
+import { useOrderCreatedListener } from "@/hooks/useOrderCreatedListener";
+import { useOrderClaimedListener } from "@/hooks/useOrderClaimedListener";
+import { useOrderCancelledListener } from "@/hooks/useOrderCancelledListener";
+import { useOrderUnassignedListener } from "@/hooks/useOrderUnassignedListener";
 
-// Defines what the "next" status is for a given current status —
-// only shows a button when there's a valid next step for ADMIN to trigger.
-// (out_for_delivery -> delivered is the delivery partner's job, not admin's — no button for that here.)
 const NEXT_STATUS = {
   placed: "confirmed",
   confirmed: "preparing",
 };
 
 export default function AdminOrdersPage() {
-  const {
-    allOrders,
-    allOrdersPagination,
-    adminOrdersLoading,
-    adminOrdersError,
-    fetchAllOrders,
-    advanceOrderStatus,
-  } = useOrders();
+  const { advanceOrderStatus } = useOrders();
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    fetchAllOrders(currentPage);
-  }, [currentPage, fetchAllOrders]);
+  const { data, error: swrError, isLoading, mutate } = useSWR(
+    `/orders?page=${currentPage}`,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+
+  const handleOrderEvent = useCallback(() => {
+    mutate();
+  }, [mutate]);
+
+  useOrderStatusListener(handleOrderEvent);
+  useOrderCreatedListener(handleOrderEvent);
+  useOrderClaimedListener(handleOrderEvent);
+  useOrderCancelledListener(handleOrderEvent);
+  useOrderUnassignedListener(handleOrderEvent);
+
+  const allOrders = Array.isArray(data) ? data : data?.orders ?? [];
+  const allOrdersPagination = data?.pagination ?? null;
+  const adminOrdersLoading = isLoading;
+  const adminOrdersError = swrError ? "Could not load orders." : "";
+
+  async function handleAdvance(orderId, nextStatus) {
+    await advanceOrderStatus(orderId, nextStatus);
+    await mutate();
+  }
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
@@ -65,7 +84,7 @@ export default function AdminOrdersPage() {
 
               {nextStatus && (
                 <button
-                  onClick={() => advanceOrderStatus(order._id, nextStatus, currentPage)}
+                  onClick={() => handleAdvance(order._id, nextStatus)}
                   className="bg-orange-600 text-white text-sm px-3 py-2 rounded-md hover:bg-orange-700 mt-2"
                 >
                   Mark as {nextStatus.replace(/_/g, " ")}

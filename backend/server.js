@@ -2,6 +2,8 @@ import "dotenv/config";
 
 import express from "express"
 import cors from "cors"
+import compression from "compression"
+import helmet from "helmet"
 import cookieParser from "cookie-parser"
 import connectDB from "./config/db.js"
 import authRoutes from "./routes/authRoutes.js"
@@ -20,11 +22,13 @@ import { razorpayWebhookHandler } from "./controllers/orderController.js";
 connectDB();
 
 const app = express();
-app.set("etag", false);
 app.set("trust proxy", 1);
 registerEmailListeners();
 const clientUrls = process.env.CLIENT_URL ;
 const allowedOrigins = clientUrls.split(",").map((url) => url.trim().replace(/\/+$/, ""));
+
+app.use(helmet());
+app.use(compression());
 
 app.use(cors({
   origin: (origin, callback) => {

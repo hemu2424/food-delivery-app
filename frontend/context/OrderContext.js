@@ -8,66 +8,20 @@ const OrderContext = createContext(null);
 
 export function OrderProvider({ children }) {
   const { user } = useAuth();
-  const [myOrders, setMyOrders] = useState([]);
-  const [myOrdersPagination, setMyOrdersPagination] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const [availableOrders, setAvailableOrders] = useState([]);
   const [myDeliveries, setMyDeliveries] = useState([]);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [deliveryError, setDeliveryError] = useState("");
 
-  const [allOrders, setAllOrders] = useState([]);
-  const [allOrdersPagination, setAllOrdersPagination] = useState(null);
-  const [adminOrdersLoading, setAdminOrdersLoading] = useState(false);
-  const [adminOrdersError, setAdminOrdersError] = useState("");
-
   const removeAvailableOrderLocally = useCallback((orderId) => {
     setAvailableOrders((prev) => prev.filter((order) => order._id !== orderId));
   }, []);
 
-  const fetchAllOrders = useCallback(async (page = 1) => {
-    if (!user || user.role !== "admin") return;
-    setAdminOrdersLoading(true);
-    try {
-      const response = await api.get("/orders", { params: { page } });
-      const orders = Array.isArray(response.data) ? response.data : response.data.orders || [];
-      const pagination = response.data?.pagination || null;
-      setAllOrders(orders);
-      setAllOrdersPagination(pagination);
-      setAdminOrdersError("");
-    } catch (err) {
-      if (err.response?.status !== 401) setAdminOrdersError("Could not load orders.");
-    } finally {
-      setAdminOrdersLoading(false);
-    }
-  }, [user]);
-
-  const advanceOrderStatus = useCallback(async (orderId, newStatus, currentPage = 1) => {
-    await api.put(`/orders/${orderId}/status`, { status: newStatus });
-    await fetchAllOrders(currentPage);
-  }, [fetchAllOrders]);
-
-  const fetchMyOrders = useCallback(async (page = 1) => {
-    if (!user) {
-      setMyOrders([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const response = await api.get("/orders/my", { params: { page } });
-      const orders = Array.isArray(response.data) ? response.data : response.data.orders || [];
-      const pagination = response.data?.pagination || null;
-      setMyOrders(orders);
-      setMyOrdersPagination(pagination);
-      setError("");
-    } catch (err) {
-      if (err.response?.status !== 401) setError("Could not load your orders.");
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const advanceOrderStatus = useCallback(async (orderId, newStatus) => {
+    const response = await api.put(`/orders/${orderId}/status`, { status: newStatus });
+    return response.data;
+  }, []);
 
   const fetchDeliveryData = useCallback(async () => {
     if (!user || user.role !== "delivery") return;
@@ -124,26 +78,21 @@ export function OrderProvider({ children }) {
     await fetchDeliveryData();
   }, [fetchDeliveryData]);
 
-  const cancelOrder = useCallback(async (orderId, reason, note, page = 1) => {
+  const cancelOrder = useCallback(async (orderId, reason, note) => {
     const response = await api.put(`/orders/${orderId}/cancel`, { reason, note });
-    await fetchMyOrders(page);
     return response.data;
-  }, [fetchMyOrders]);
+  }, []);
 
   const value = useMemo(() => ({
     markPickedUp, cancelAssignedOrder, cancelOrder, verifyPayment, placeOrder,
-    myOrders, myOrdersPagination, loading, error, fetchMyOrders,
     availableOrders, myDeliveries, deliveryLoading, deliveryError, fetchDeliveryData,
     acceptOrder, markDelivered,
-    allOrders, allOrdersPagination, adminOrdersLoading, adminOrdersError,
-    fetchAllOrders, advanceOrderStatus, removeAvailableOrderLocally,
+    advanceOrderStatus, removeAvailableOrderLocally,
   }), [
     markPickedUp, cancelAssignedOrder, cancelOrder, verifyPayment, placeOrder,
-    myOrders, myOrdersPagination, loading, error, fetchMyOrders,
     availableOrders, myDeliveries, deliveryLoading, deliveryError, fetchDeliveryData,
     acceptOrder, markDelivered,
-    allOrders, allOrdersPagination, adminOrdersLoading, adminOrdersError,
-    fetchAllOrders, advanceOrderStatus, removeAvailableOrderLocally,
+    advanceOrderStatus, removeAvailableOrderLocally,
   ]);
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;

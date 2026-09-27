@@ -119,8 +119,9 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-orderSchema.index({ user: 1 });
-orderSchema.index({ deliveryPartner: 1, status: 1 }); 
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ deliveryPartner: 1, createdAt: -1 });
+orderSchema.index({ deliveryPartner: 1, status: 1 });
 orderSchema.index({ deliveryLocation: "2dsphere" });
 
 const Order =  mongoose.model("Order", orderSchema);

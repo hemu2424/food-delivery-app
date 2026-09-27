@@ -16,17 +16,23 @@ export function SocketProvider({ children }) {
 
   const showOrderStatusToast = useCallback(
     (update) => {
-      showToast(`Your order is now: ${update.status.replace(/_/g, " ")}`);
+      if (update?.status) {
+        showToast(`Your order is now: ${update.status.replace(/_/g, " ")}`);
+      }
     },
     [showToast]
   );
 
-useEffect(() => {
-    if (!user) {
+  const userId = user?._id || user?.id;
+  const userRole = user?.role;
+
+  useEffect(() => {
+    if (!userId) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
+      setSocket(null);
       return;
     }
 
@@ -34,6 +40,7 @@ useEffect(() => {
     const newSocket = io(socketUrl, {
       withCredentials: true,
       autoConnect: true,
+      transports: ["websocket", "polling"],
     });
     socketRef.current = newSocket;
 
@@ -45,23 +52,36 @@ useEffect(() => {
       setSocket(newSocket);
     };
 
+    const handleDisconnect = () => {
+      // keep socket state or update
+    };
+
     newSocket.on("connect_error", handleConnectError);
     newSocket.on("connect", handleConnect);
+    newSocket.on("disconnect", handleDisconnect);
 
-    if (user.role === "user") {
+    if (newSocket.connected) {
+      setSocket(newSocket);
+    } else {
+      setSocket(newSocket);
+    }
+
+    if (userRole === "user") {
       newSocket.on("order:statusUpdated", showOrderStatusToast);
     }
 
     return () => {
       newSocket.off("connect", handleConnect);
+      newSocket.off("disconnect", handleDisconnect);
       newSocket.off("connect_error", handleConnectError);
       newSocket.off("order:statusUpdated", showOrderStatusToast);
       newSocket.disconnect();
       if (socketRef.current === newSocket) {
         socketRef.current = null;
       }
+      setSocket(null);
     };
-}, [user, showOrderStatusToast]);
+  }, [userId, userRole, showOrderStatusToast]);
 
   const value = useMemo(() => ({ socket: user ? socket : null }), [user, socket]);
 

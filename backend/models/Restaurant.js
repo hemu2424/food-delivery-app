@@ -34,8 +34,6 @@ const restaurantSchema = new mongoose.Schema(
 
 
 restaurantSchema.index({ location: "2dsphere" });
-
-
-restaurantSchema.index({ isActive: 1 });
+restaurantSchema.index({ isActive: 1, createdAt: -1 });
 
 export default mongoose.model("Restaurant", restaurantSchema);

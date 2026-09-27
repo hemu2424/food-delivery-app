@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, Suspense } from "react";
+import useSWR from "swr";
+import fetcher from "@/lib/fetcher";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useRestaurants } from "@/context/RestaurantContext";
 import { useLocation } from "@/context/LocationContext";
 import RestaurantCard from "@/components/user/RestaurantCard";
 import RestaurantCardSkeleton from "@/components/shared/RestaurantCardSkeleton";
@@ -12,17 +13,22 @@ import { useAddresses } from "@/context/AddressContext";
 function DashboardContent() {
   const { fetchAddresses } = useAddresses();
   const { coordinates, status, LOCATION_STATUS } = useLocation();
-  const { nearbyRestaurants, nearbySearchRadiusKm, nearbyLoading, nearbyError, fetchNearbyRestaurants } =
-    useRestaurants();
+
+  const shouldFetch = status === LOCATION_STATUS.READY && coordinates;
+  const { data, error, isLoading } = useSWR(
+    shouldFetch ? `/restaurants/nearby?lat=${coordinates.latitude}&lng=${coordinates.longitude}` : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 60000 }
+  );
+
+  const nearbyRestaurants = data?.restaurants ?? [];
+  const nearbySearchRadiusKm = data?.searchRadiusKm ?? null;
+  const nearbyLoading = isLoading;
+  const nearbyError = error ? "Could not load nearby restaurants." : "";
 
   useEffect(() => {
-    if (status === LOCATION_STATUS.READY && coordinates) {
-      fetchNearbyRestaurants(coordinates.latitude, coordinates.longitude);
-    }
-  }, [status, coordinates, LOCATION_STATUS, fetchNearbyRestaurants]);
-  useEffect(() => {
-  fetchAddresses();
-}, [fetchAddresses]);
+    fetchAddresses();
+  }, [fetchAddresses]);
 
   return (
     <>
