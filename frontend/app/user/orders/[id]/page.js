@@ -23,6 +23,32 @@ function OrderDetailContent() {
   "Found a better price elsewhere",
   "Other",
 ];
+const [downloading, setDownloading] = useState(false);
+
+async function handleDownloadInvoice() {
+  try {
+    setDownloading(true);
+    const res = await api.get(`/orders/${order._id}/invoice`, {
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(
+      new Blob([res.data], { type: "application/pdf" })
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `invoice-${order._id.slice(-6)}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Invoice download failed", err);
+    // show your error toast/state here
+  } finally {
+    setDownloading(false);
+  }
+}
 const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
   const { cancelOrder } = useOrders();
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -117,16 +143,17 @@ const CANCELLABLE_STATUSES = ["placed", "confirmed", "preparing"];
               <span>Total</span>
               <span>₹{order.totalAmount}</span>
             </div>
-            {order.status === "delivered" && (
-              <a
-                href={getInvoiceUrl(order._id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-4 text-sm border border-orange-600 text-orange-600 px-4 py-2 rounded-md hover:bg-orange-50"
-              >
-                Download Invoice
-              </a>
-            )}
+            
+              {order.status === "delivered" && (
+  <button
+    onClick={handleDownloadInvoice}
+    disabled={downloading}
+    className="inline-block mt-4 text-sm border border-orange-600 text-orange-600 px-4 py-2 rounded-md hover:bg-orange-50 disabled:opacity-50"
+  >
+    {downloading ? "Downloading..." : "Download Invoice"}
+  </button>
+)}
+            
           </div>
 
           <p className="text-sm text-gray-500">

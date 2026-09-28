@@ -15,18 +15,37 @@ const generalLimiter = rateLimit({
 });
 
 
- const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 10, 
-  standardHeaders: true, 
-  legacyHeaders: false,
+const isProd = process.env.NODE_ENV === "production";
+const WINDOW = 15 * 60 * 1000;
 
-  
+const baseOptions = {
+  windowMs: WINDOW,
+  standardHeaders: true,
+  legacyHeaders: false,
   skip: (req) => req.method === "OPTIONS",
-  message: {
-    success: false,
-    message: "Too many login attempts. Please try again after 15 minutes.",
-  },
+};
+
+// Login: only failed attempts count
+const loginLimiter = rateLimit({
+  ...baseOptions,
+  limit: isProd ? 10 : 100,
+  skipSuccessfulRequests: true,
+  message: { success: false, message: "Too many login attempts. Try again in 15 minutes." },
 });
 
-export { generalLimiter, authLimiter };
+// Guessing a code: verify-email, reset-password
+const otpLimiter = rateLimit({
+  ...baseOptions,
+  limit: isProd ? 10 : 100,
+  message: { success: false, message: "Too many code attempts. Try again in 15 minutes." },
+});
+
+// Sending emails: resend-otp, forgot-password
+const emailLimiter = rateLimit({
+  ...baseOptions,
+  limit: isProd ? 5 : 50,
+  message: { success: false, message: "Too many email requests. Try again in 15 minutes." },
+});
+
+export { generalLimiter, loginLimiter, otpLimiter, emailLimiter };
+
