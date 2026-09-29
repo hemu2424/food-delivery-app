@@ -3,21 +3,29 @@ import express from "express"
 import { changePassword, forgotPassword, getProfile, login, logout, register, resendOtp, resetPassword, updateProfile, verifyEmail } from "../controllers/authController.js";
 import { protect } from "../middlewares/auth.js";
 import validate from "../middlewares/validate.js";
-import { forgotPasswordSchema, loginSchema, registerSchema, resendOtpSchema, resetPasswordSchema, verifyEmailSchema } from "../validators/authValidation.js";
+import {
+  changePasswordSchema,
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resendOtpSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+} from "../validators/authValidation.js";
 import upload from "../middlewares/upload.js";
-import {  emailLimiter, loginLimiter, otpLimiter } from "../middlewares/rateLimiter.js";
+import { emailLimiter, loginLimiter, otpLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
 router.post("/register", validate(registerSchema), register);
 
-router.post("/login",loginLimiter, validate(loginSchema), login);
-router.post("/logout",          logout);
-router.post("/verify-email",    otpLimiter,   validate(verifyEmailSchema), verifyEmail);
-router.post("/resend-otp",      emailLimiter, validate(resendOtpSchema), resendOtp);
+router.post("/login", loginLimiter, validate(loginSchema), login);
+router.post("/logout", logout);
+router.post("/verify-email", otpLimiter, validate(verifyEmailSchema), verifyEmail);
+router.post("/resend-otp", emailLimiter, validate(resendOtpSchema), resendOtp);
 router.post("/forgot-password", emailLimiter, validate(forgotPasswordSchema), forgotPassword);
-router.post("/reset-password",  otpLimiter,   validate(resetPasswordSchema), resetPassword);
-router.put("/change-password", protect, changePassword);
+router.post("/reset-password", otpLimiter, validate(resetPasswordSchema), resetPassword);
+router.put("/change-password", protect, validate(changePasswordSchema), changePassword);
 router.put("/me", protect, upload.single("avatar"), updateProfile);
 
 router.get("/me", protect, getProfile);

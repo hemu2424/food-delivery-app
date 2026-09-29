@@ -28,7 +28,7 @@ async function getDashboardStats(req, res, next) {
         Order.find({ status: "delivered" }).select("totalAmount"),
       ]);
 
-    const totalRevenue = deliveredOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalRevenue = deliveredOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
     res.json({
       totalCustomers,
