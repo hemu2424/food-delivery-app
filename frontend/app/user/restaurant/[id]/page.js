@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import RestaurantDetailClient from "@/components/user/RestaurantDetailClient";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
+const API_URL = (
+  (typeof window === "undefined" && process.env.INTERNAL_API_URL)
+    ? process.env.INTERNAL_API_URL
+    : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")
+).replace(/\/+$/, "");
 
 async function getRestaurantData(id) {
   const res = await fetch(`${API_URL}/restaurants/${id}`, {

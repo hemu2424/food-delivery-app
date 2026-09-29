@@ -18,19 +18,24 @@ function generateToken(user) {
   );
 }
 
-// Global cookie options configuration
-const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
+function getCookieOptions(req) {
+  const isHttps =
+    Boolean(process.env.RENDER) ||
+    process.env.COOKIE_SECURE === "true" ||
+    req?.secure ||
+    req?.headers?.["x-forwarded-proto"] === "https";
 
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: isProduction ? "none" : "lax",
-  secure: isProduction ? true : false,
-  path: "/",
-};
+  return {
+    httpOnly: true,
+    sameSite: isHttps ? "none" : "lax",
+    secure: isHttps,
+    path: "/",
+  };
+}
 
-function setTokenCookie(res, token) {
+function setTokenCookie(req, res, token) {
   res.cookie("token", token, {
-    ...COOKIE_OPTIONS,
+    ...getCookieOptions(req),
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 }
@@ -110,7 +115,7 @@ async function verifyEmail(req, res, next) {
     await invalidateCachedUser(user._id);
 
     const token = generateToken(user);
-    setTokenCookie(res, token);
+    setTokenCookie(req, res, token);
 
     res.json({
       user: {
@@ -183,7 +188,7 @@ async function login(req, res, next) {
     }
 
     const token = generateToken(user);
-    setTokenCookie(res, token);
+    setTokenCookie(req, res, token);
     
     res.status(200).json({
       user: {
@@ -202,7 +207,7 @@ async function login(req, res, next) {
 
 async function logout(req, res, next) {
   try {
-    res.clearCookie("token", COOKIE_OPTIONS);
+    res.clearCookie("token", getCookieOptions(req));
     res.status(200).json({ message: "You are logged out successfully" });
   } catch (error) {
     next(error);
