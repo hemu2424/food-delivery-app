@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 
+const isVercel = Boolean(process.env.VERCEL);
+
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
-  output: "standalone",
+  // Standalone output is needed for Docker, but Vercel requires its default serverless packaging
+  ...(isVercel ? {} : { output: "standalone" }),
 
   images: {
     remotePatterns: [
