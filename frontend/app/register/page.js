@@ -1,16 +1,11 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
-import { AddressProvider } from "@/context/AddressContext";
 import Link from "next/link";
 import { useState } from "react";
 import AddressSearchInput from "@/components/user/AddressSearchInput";
 
 export default function RegisterPage() {
-  return (
-    <AddressProvider>
-      <RegisterForm />
-    </AddressProvider>
-  );
+  return <RegisterForm />;
 }
 
 function RegisterForm() {

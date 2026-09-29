@@ -52,9 +52,13 @@ function generateInvoicePdf(order, res) {
 
   doc.moveDown(2);
   doc.font("Helvetica").fontSize(10).fillColor("gray");
-  doc.text("Payment Method: Cash on Delivery", { align: "left" });
+  const paymentMethodLabel =
+    order.paymentMethod === "razorpay" ? "Online Payment (Razorpay)" : "Cash on Delivery (COD)";
+  const paymentStatusLabel = (order.paymentStatus || "pending").toUpperCase();
+  doc.text(`Payment Method: ${paymentMethodLabel}`, { align: "left" });
+  doc.text(`Payment Status: ${paymentStatusLabel}`, { align: "left" });
+  doc.moveDown(0.5);
   doc.text("Thank you for ordering with FoodExpress!", { align: "left" });
-
 
   doc.end();
 }

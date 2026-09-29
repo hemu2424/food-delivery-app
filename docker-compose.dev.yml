@@ -3,67 +3,74 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-
     container_name: food-delivery-backend-dev
     restart: unless-stopped
-    tty: true
-
     ports:
       - "5000:5000"
-
     environment:
       MONGO_URI: ${MONGO_URI}
       JWT_SECRET: ${JWT_SECRET}
       PORT: 5000
       NODE_ENV: development
-      CLIENT_URL: ${CLIENT_URL}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
       EMAIL_USER: ${EMAIL_USER}
       EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      Email_to: ${Email_to}
+      BREVO_API_KEY: ${BREVO_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      GMAIL_USER: ${GMAIL_USER}
+      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
+      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
+      GMAIL_REFRESH_TOKEN: ${GMAIL_REFRESH_TOKEN}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+      MAPTILER_API_KEY: ${MAPTILER_API_KEY}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
-      EMAIL_FROM: ${EMAIL_FROM}
       REDIS_URL: ${REDIS_URL}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
-      MAPTILER_API_KEY: ${MAPTILER_API_KEY}
-
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
-
-    command: npx nodemon --legacy-watch server.js
+    networks:
+      - food-delivery-network-dev
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-
     container_name: food-delivery-frontend-dev
     restart: unless-stopped
-    tty: true
-
     ports:
       - "3000:3000"
-
     depends_on:
       - backend
-
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+      INTERNAL_API_URL: http://backend:5000/api
+      NODE_ENV: development
+      PORT: 3000
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING_INTERVAL: "1000"
-
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
+      - /app/.next
+    networks:
+      - food-delivery-network-dev
 
 volumes:
   backend_node_modules:
   frontend_node_modules:
+
+networks:
+  food-delivery-network-dev:
+    driver: bridge

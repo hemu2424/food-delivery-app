@@ -2,6 +2,10 @@ import {Users} from "../models/Users.js";
 import jwt from "jsonwebtoken"
 import { getCachedUser, setCachedUser } from "../utils/userCache.js";
 
+// Fields that must never be attached to req.user, returned to the client,
+// or stored in the Redis user cache.
+const SENSITIVE_FIELDS = "-password -emailOtp -emailOtpExpires -resetPasswordOtp -resetPasswordExpires";
+
 async function  protect(req,res,next){
 
     try{
@@ -22,7 +26,7 @@ async function  protect(req,res,next){
         let user = await getCachedUser(decoded.id);
 
         if (!user) {
-          const userDoc = await Users.findById(decoded.id).select("-password");
+          const userDoc = await Users.findById(decoded.id).select(SENSITIVE_FIELDS);
           if (!userDoc) {
             return res.status(401).json({
               message: "user not exist"

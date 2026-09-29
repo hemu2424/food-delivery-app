@@ -54,22 +54,21 @@ async function getRestaurants(req, res, next) {
       return res.json(JSON.parse(cached));
     }
 
+    // Built once and shared by the list query and the count query
+    const filter = {
+      isActive: true,
+      ...(search && { name: { $regex: search, $options: "i" } }),
+      ...(cuisine && { cuisine: { $regex: cuisine, $options: "i" } }),
+    };
+
     const [restaurants, totalRestaurants] = await Promise.all([
-      Restaurant.find({
-        isActive: true,
-        ...(search && { name: { $regex: search, $options: "i" } }),
-        ...(cuisine && { cuisine: { $regex: cuisine, $options: "i" } }),
-      })
+      Restaurant.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .lean(), ,
+        .lean(),
 
-      Restaurant.countDocuments({
-        isActive: true,
-        ...(search && { name: { $regex: search, $options: "i" } }),
-        ...(cuisine && { cuisine: { $regex: cuisine, $options: "i" } }),
-      }),
+      Restaurant.countDocuments(filter),
     ]);
 
     const responseBody = {
@@ -105,13 +104,24 @@ async function getRestaurantById(req, res, next) {
 }
 
 
+async function invalidateRestaurantCache() {
+  try {
+    const keys = await redis.keys("restaurants:list:*");
+    const allKeys = [...keys, CUISINES_CACHE_KEY];
+    if (allKeys.length > 0) {
+      await redis.del(allKeys);
+    }
+  } catch (error) {
+    console.error("Failed to invalidate restaurant cache:", error.message);
+  }
+}
+
 async function createRestaurant(req, res, next) {
   try {
     const { name, description, cuisine, address, deliveryRadiusKm } = req.body;
 
     const imageUrls = (req.files?.images || []).map((file) => file.path);
     const videoUrl = req.files?.video?.[0]?.path || null;
-
 
     const geocoded = await geocodeAddress(address);
 
@@ -134,7 +144,7 @@ async function createRestaurant(req, res, next) {
         coordinates: [geocoded.longitude, geocoded.latitude],
       },
     });
-    await redis.del(CUISINES_CACHE_KEY);
+    await invalidateRestaurantCache();
     res.status(201).json(restaurant);
   } catch (error) {
     next(error);
@@ -155,7 +165,6 @@ async function updateRestaurant(req, res, next) {
       }
     });
 
-
     if (req.body.address && req.body.address !== restaurant.address) {
       const geocoded = await geocodeAddress(req.body.address);
       if (!geocoded) {
@@ -175,10 +184,14 @@ async function updateRestaurant(req, res, next) {
       restaurant.images.push(...newImageUrls);
     }
     if (req.files?.video?.[0]) {
+      if (restaurant.video) {
+        await deleteFileFromCloud(restaurant.video, "video");
+      }
       restaurant.video = req.files.video[0].path;
     }
 
     await restaurant.save();
+    await invalidateRestaurantCache();
     res.json(restaurant);
   } catch (error) {
     next(error);
@@ -206,6 +219,7 @@ async function deleteRestaurantImage(req, res, next) {
       imagePath,
       isVideo ? "video" : "image"
     );
+    await invalidateRestaurantCache();
     res.json(restaurant);
   } catch (error) {
     next(error);
@@ -228,6 +242,7 @@ async function deleteRestaurant(req, res, next) {
 
     await MenuItem.deleteMany({ restaurant: restaurant._id });
     await restaurant.deleteOne();
+    await invalidateRestaurantCache();
 
     res.json({ message: "Restaurant deleted successfully" });
   } catch (error) {
@@ -259,7 +274,7 @@ const SEARCH_RADII_KM = [3, 5, 7, 10, 15, 25, 35];
 
 async function getNearbyRestaurants(req, res, next) {
   try {
-    const { lat, lng } = req.query;
+    const { lat, lng, radius, radiusKm, deliveryRadiusKm } = req.query;
 
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
@@ -273,16 +288,18 @@ async function getNearbyRestaurants(req, res, next) {
       return res.status(400).json({ message: "Invalid or missing coordinates" });
     }
 
+    const requestedRadius = parseFloat(radius || radiusKm || deliveryRadiusKm);
+
     let restaurants = [];
     let radiusUsedKm = null;
 
-    for (const radiusKm of SEARCH_RADII_KM) {
+    if (!isNaN(requestedRadius) && requestedRadius > 0) {
       const results = await Restaurant.aggregate([
         {
           $geoNear: {
             near: { type: "Point", coordinates: [longitude, latitude] },
             distanceField: "distanceInMeters",
-            maxDistance: radiusKm * 1000,
+            maxDistance: requestedRadius * 1000,
             spherical: true,
             query: { isActive: true },
           },
@@ -294,10 +311,32 @@ async function getNearbyRestaurants(req, res, next) {
         return distanceKm <= (r.deliveryRadiusKm || 5);
       });
 
-      if (deliverable.length > 0) {
-        restaurants = deliverable;
-        radiusUsedKm = radiusKm;
-        break;
+      restaurants = deliverable;
+      radiusUsedKm = requestedRadius;
+    } else {
+      for (const radiusKm of SEARCH_RADII_KM) {
+        const results = await Restaurant.aggregate([
+          {
+            $geoNear: {
+              near: { type: "Point", coordinates: [longitude, latitude] },
+              distanceField: "distanceInMeters",
+              maxDistance: radiusKm * 1000,
+              spherical: true,
+              query: { isActive: true },
+            },
+          },
+        ]);
+
+        const deliverable = results.filter((r) => {
+          const distanceKm = r.distanceInMeters / 1000;
+          return distanceKm <= (r.deliveryRadiusKm || 5);
+        });
+
+        if (deliverable.length > 0) {
+          restaurants = deliverable;
+          radiusUsedKm = radiusKm;
+          break;
+        }
       }
     }
 

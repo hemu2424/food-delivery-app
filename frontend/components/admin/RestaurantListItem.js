@@ -30,20 +30,35 @@ function RestaurantListItem({ restaurant }) {
   }
 
   return (
-    <div className="bg-white border rounded-lg p-4">
+    <div className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
       <Link href={`/admin/restaurants/${restaurant._id}`} className="block hover:opacity-80">
-        <p className="font-semibold">{restaurant.name}</p>
+        <p className="font-semibold text-gray-900 text-lg">{restaurant.name}</p>
         <p className="text-sm text-gray-500">{restaurant.cuisine}</p>
+        {restaurant.address && (
+          <p className="text-xs text-gray-400 mt-1 line-clamp-1">📍 {restaurant.address}</p>
+        )}
       </Link>
 
-      <div className="flex gap-2 mt-2 flex-wrap">
-        <button onClick={() => setShowEditForm(!showEditForm)} className="text-sm border px-3 py-1.5 rounded-md">
-          {showEditForm ? "Close" : "Edit"}
+      <div className="flex gap-2 mt-3 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setShowEditForm(!showEditForm)}
+          className="text-xs border px-3 py-1.5 rounded-md hover:bg-gray-50 font-medium"
+        >
+          {showEditForm ? "Close Edit" : "Edit"}
         </button>
-        <button onClick={() => setShowMenuForm(!showMenuForm)} className="text-sm border px-3 py-1.5 rounded-md">
-          {showMenuForm ? "Close" : "+ Menu Item"}
+        <button
+          type="button"
+          onClick={() => setShowMenuForm(!showMenuForm)}
+          className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-3 py-1.5 rounded-md hover:bg-orange-100 font-medium"
+        >
+          {showMenuForm ? "Close Menu Form" : "+ Menu Item"}
         </button>
-        <button onClick={handleDelete} className="text-sm text-red-600 border border-red-200 px-3 py-1.5 rounded-md">
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded-md hover:bg-red-50 font-medium"
+        >
           Delete
         </button>
       </div>
@@ -51,7 +66,10 @@ function RestaurantListItem({ restaurant }) {
       <ImageGallery images={restaurant.images} onDelete={handleDeleteImage} />
 
       {restaurant.video && (
-        <video src={restaurant.video} controls className="w-full max-w-xs mt-3 rounded-md" />
+        <div className="mt-3">
+          <p className="text-xs text-gray-400 mb-1">Promo Video:</p>
+          <video src={restaurant.video} controls className="w-full max-w-xs rounded-md border" />
+        </div>
       )}
 
       {showEditForm && (

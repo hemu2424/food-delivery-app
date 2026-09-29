@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
 import api from "@/lib/api";
 import { mutate } from "swr";
 import { useContext, useState, createContext, useCallback, useMemo } from "react";
+
 const RestaurantsContext = createContext(null);
 
 export function RestaurantProvider({ children }) {
@@ -10,8 +11,15 @@ export function RestaurantProvider({ children }) {
   const [menuItems, setMenuItems] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
-
   const [cuisines, setCuisines] = useState([]);
+
+  const revalidateRestaurants = useCallback(async () => {
+    await mutate(
+      (key) => typeof key === "string" && key.startsWith("/restaurants"),
+      undefined,
+      { revalidate: true }
+    );
+  }, []);
 
   const fetchCuisines = useCallback(async () => {
     try {
@@ -24,6 +32,7 @@ export function RestaurantProvider({ children }) {
   }, []);
 
   const fetchRestaurantById = useCallback(async (id) => {
+    if (!id) return;
     setDetailLoading(true);
     try {
       const response = await api.get(`/restaurants/${id}`);
@@ -31,7 +40,7 @@ export function RestaurantProvider({ children }) {
       setMenuItems(Array.isArray(response.data.menuItems) ? response.data.menuItems : []);
       setDetailError("");
     } catch (err) {
-      console.log(err);
+      console.error(err);
       setDetailError("Could not load this restaurant.");
     } finally {
       setDetailLoading(false);
@@ -39,40 +48,70 @@ export function RestaurantProvider({ children }) {
   }, []);
 
   const updateRestaurant = useCallback(async (id, formData) => {
-    await api.put(`/restaurants/${id}`, formData);
-    await mutate("/restaurants");
-  }, []);
+    const response = await api.put(`/restaurants/${id}`, formData);
+    await revalidateRestaurants();
+    return response.data;
+  }, [revalidateRestaurants]);
 
   const createRestaurant = useCallback(async (formData) => {
-    await api.post("/restaurants", formData);
-    await mutate("/restaurants");
-  }, []);
+    const response = await api.post("/restaurants", formData);
+    await revalidateRestaurants();
+    return response.data;
+  }, [revalidateRestaurants]);
 
   const deleteRestaurant = useCallback(async (id) => {
-    await api.delete(`/restaurants/${id}`);
-    await mutate("/restaurants");
-  }, []);
+    const response = await api.delete(`/restaurants/${id}`);
+    await revalidateRestaurants();
+    return response.data;
+  }, [revalidateRestaurants]);
 
   const deleteRestaurantImage = useCallback(async (restaurantId, imagePath) => {
-    await api.delete(`/restaurants/${restaurantId}/images`, { data: { imagePath } });
-    await mutate("/restaurants");
-  }, []);
+    const response = await api.delete(`/restaurants/${restaurantId}/images`, {
+      data: { imagePath },
+    });
+    await revalidateRestaurants();
+    return response.data;
+  }, [revalidateRestaurants]);
 
-  const value = useMemo(() => ({
-    createRestaurant, deleteRestaurant, deleteRestaurantImage,
-    currentRestaurant, menuItems, detailLoading, detailError, fetchRestaurantById,
-    cuisines, fetchCuisines, updateRestaurant,
-  }), [
-    createRestaurant, deleteRestaurant, deleteRestaurantImage,
-    currentRestaurant, menuItems, detailLoading, detailError, fetchRestaurantById,
-    cuisines, fetchCuisines, updateRestaurant,
-  ]);
+  const value = useMemo(
+    () => ({
+      createRestaurant,
+      deleteRestaurant,
+      deleteRestaurantImage,
+      currentRestaurant,
+      menuItems,
+      detailLoading,
+      detailError,
+      fetchRestaurantById,
+      cuisines,
+      fetchCuisines,
+      updateRestaurant,
+    }),
+    [
+      createRestaurant,
+      deleteRestaurant,
+      deleteRestaurantImage,
+      currentRestaurant,
+      menuItems,
+      detailLoading,
+      detailError,
+      fetchRestaurantById,
+      cuisines,
+      fetchCuisines,
+      updateRestaurant,
+    ]
+  );
 
-  return <RestaurantsContext.Provider value={value}>{children}</RestaurantsContext.Provider>;
+  return (
+    <RestaurantsContext.Provider value={value}>
+      {children}
+    </RestaurantsContext.Provider>
+  );
 }
 
 export function useRestaurants() {
   const context = useContext(RestaurantsContext);
-  if (!context) throw new Error("useRestaurants must be used inside a RestaurantProvider");
+  if (!context)
+    throw new Error("useRestaurants must be used inside a RestaurantProvider");
   return context;
 }

@@ -5,6 +5,7 @@ import { SocketProvider } from "@/context/SocketContext";
 import Navbar from "@/components/Navbar";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { AddressProvider } from "@/context/AddressContext";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -20,12 +21,14 @@ export default function RootLayout({ children }) {
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ToastProvider>
           <AuthProvider>
-            <SocketProvider>
-              <CartProvider>
-                <Navbar />
-                {children}
-              </CartProvider>
-            </SocketProvider>
+            <AddressProvider>
+              <SocketProvider>
+                <CartProvider>
+                  <Navbar />
+                  {children}
+                </CartProvider>
+              </SocketProvider>
+            </AddressProvider>
           </AuthProvider>
         </ToastProvider>
       </body>
