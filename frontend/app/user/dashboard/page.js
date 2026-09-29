@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import useSWR from "swr";
 import fetcher from "@/lib/fetcher";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -13,12 +13,25 @@ import { useAddresses } from "@/context/AddressContext";
 function DashboardContent() {
   const { fetchAddresses } = useAddresses();
   const { coordinates, status, LOCATION_STATUS } = useLocation();
+  const [formData, setFormData] = useState({
+    deliveryRadiusKm: "",
+  });
+
+  function handleTextChange(e) {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  }
 
   const shouldFetch = status === LOCATION_STATUS.READY && coordinates;
+  const radiusQuery = formData.deliveryRadiusKm
+    ? `&radius=${formData.deliveryRadiusKm}`
+    : "";
+
   const { data, error, isLoading } = useSWR(
-    shouldFetch ? `/restaurants/nearby?lat=${coordinates.latitude}&lng=${coordinates.longitude}` : null,
+    shouldFetch
+      ? `/restaurants/nearby?lat=${coordinates.latitude}&lng=${coordinates.longitude}${radiusQuery}`
+      : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60000 }
+    { revalidateOnFocus: false, dedupingInterval: 5000 }
   );
 
   const nearbyRestaurants = data?.restaurants ?? [];
@@ -38,6 +51,25 @@ function DashboardContent() {
 
       {status === LOCATION_STATUS.READY && (
         <>
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-6 max-w-md">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Delivery Radius (km)
+                </label>
+                <input
+                  name="deliveryRadiusKm"
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder="e.g. 5, 10, 20"
+                  value={formData.deliveryRadiusKm}
+                  onChange={handleTextChange}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-200"
+                />
+              </div>
+            </div>
+          </div>
           {nearbyLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => <RestaurantCardSkeleton key={i} />)}

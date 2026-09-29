@@ -9,6 +9,22 @@ import razorpay from "../config/razorpay.js";
 
 import Restaurant from "../models/Restaurant.js";
 
+// Tells admins (and the customer) that a new order is now live.
+// COD orders call this at creation; online orders call it once payment is confirmed.
+function emitOrderPlaced(order) {
+  try {
+    const io = getIO();
+    io.to("admins").emit("order:created", { orderId: order._id, order });
+    io.to("admins").emit("order:statusUpdated", { orderId: order._id, status: order.status });
+    io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
+      orderId: order._id,
+      status: order.status,
+    });
+  } catch (e) {
+    console.error("Socket emit error on order placed:", e.message);
+  }
+}
+
 async function createOrder(req, res, next) {
   try {
     const { restaurant, items, deliveryAddress, latitude, longitude, paymentMethod } = req.body;
@@ -50,17 +66,7 @@ async function createOrder(req, res, next) {
     });
 
     if (order.paymentMethod === "cod") {
-      try {
-        const io = getIO();
-        io.to("admins").emit("order:created", { orderId: order._id, order });
-        io.to("admins").emit("order:statusUpdated", { orderId: order._id, status: order.status });
-        io.to(`user:${order.user.toString()}`).emit("order:statusUpdated", {
-          orderId: order._id,
-          status: order.status,
-        });
-      } catch (e) {
-        console.error("Socket emit error on createOrder:", e.message);
-      }
+      emitOrderPlaced(order);
       return res.status(201).json({ order });
     }
 
@@ -119,7 +125,6 @@ async function getOrderById(req, res, next) {
       .populate("user", "name phone")
       .populate("deliveryPartner", "name phone")
       .lean();
-      console.log(order)
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -193,6 +198,16 @@ async function updateOrderStatus(req, res, next) {
       if (status !== "delivered") {
         return res.status(403).json({ message: "Delivery partners can only mark orders as delivered" });
       }
+    }
+
+    // An online order must be paid before it can move forward.
+    // Cancelling is still allowed so unpaid orders can be cleaned up.
+    if (
+      order.paymentMethod === "razorpay" &&
+      order.paymentStatus !== "paid" &&
+      status !== "cancelled"
+    ) {
+      return res.status(400).json({ message: "Payment is still pending for this online order" });
     }
 
     if (!canTransition(order.status, status)) {
@@ -540,17 +555,31 @@ async function verifyPayment(req, res, next) {
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-      order.paymentStatus = "failed";
-      await order.save();
+      // Never downgrade an order that is already confirmed as paid
+      if (order.paymentStatus !== "paid") {
+        order.paymentStatus = "failed";
+        await order.save();
+      }
       return res.status(400).json({ message: "Payment verification failed" });
     }
 
-    // Signature matches — this payment is genuinely confirmed by Razorpay
-    order.paymentStatus = "paid";
-    order.razorpayPaymentId = razorpay_payment_id;
-    await order.save();
+    // Signature matches — this payment is genuinely confirmed by Razorpay.
+    // Atomic update: only one caller (this endpoint or the webhook) can flip the
+    // order to "paid", so the admin notification is sent exactly once.
+    const updatedOrder = await Order.findOneAndUpdate(
+      { _id: order._id, paymentStatus: { $in: ["pending", "failed"] } },
+      { paymentStatus: "paid", razorpayPaymentId: razorpay_payment_id },
+      { new: true }
+    );
 
-    res.json({ message: "Payment verified successfully", order });
+    if (updatedOrder) {
+      emitOrderPlaced(updatedOrder);
+    }
+
+    // If updatedOrder is null the webhook already marked it paid — still a success
+    const finalOrder = updatedOrder || (await Order.findById(order._id));
+
+    res.json({ message: "Payment verified successfully", order: finalOrder });
   } catch (error) {
     next(error);
   }
@@ -578,18 +607,25 @@ async function razorpayWebhookHandler(req, res) {
 
     if (event.event === "payment.captured") {
       const payment = event.payload.payment.entity;
-      const order = await Order.findOne({ razorpayOrderId: payment.order_id });
-      if (!order) {
-        console.error(`Webhook: no order found for razorpay order ${payment.order_id}`);
-        return;
+
+      // Atomic: only succeeds if the order isn't already paid (Razorpay can send
+      // this event more than once, and verifyPayment may have got there first)
+      const order = await Order.findOneAndUpdate(
+        { razorpayOrderId: payment.order_id, paymentStatus: { $in: ["pending", "failed"] } },
+        { paymentStatus: "paid", razorpayPaymentId: payment.id },
+        { new: true }
+      );
+
+      if (order) {
+        emitOrderPlaced(order);
+        console.log(`Webhook: order ${order._id} marked paid via payment.captured`);
+      } else {
+        const exists = await Order.exists({ razorpayOrderId: payment.order_id });
+        if (!exists) {
+          console.error(`Webhook: no order found for razorpay order ${payment.order_id}`);
+        }
       }
-      if (order.paymentStatus === "paid") {
-        return; // already processed — Razorpay can send this event more than once
-      }
-      order.paymentStatus = "paid";
-      order.razorpayPaymentId = payment.id;
-      await order.save();
-      console.log(`Webhook: order ${order._id} marked paid via payment.captured`);
+      return;
     }
 
     if (event.event === "payment.failed") {

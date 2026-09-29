@@ -1,7 +1,10 @@
 import { z } from "zod";
 
-const createAddressSchema = z.object({
-  label: z.enum(["home", "work", "other"]).default("home"),
+const labelEnum = z.enum(["home", "work", "other"]);
+
+// Shared fields with NO defaults, so a partial update never injects values
+const baseAddressSchema = z.object({
+  label: labelEnum,
   flatOrBuilding: z.string().min(2, "Please enter your flat/house/building details"),
   locality: z.string().optional(),
   city: z.string().optional(), // relaxed — not every location has a clean "city" tag
@@ -14,6 +17,12 @@ const createAddressSchema = z.object({
   isDefault: z.boolean().optional(),
 });
 
-const updateAddressSchema = createAddressSchema.partial();
+// Creating: label falls back to "home" when the client doesn't send one
+const createAddressSchema = baseAddressSchema.extend({
+  label: labelEnum.default("home"),
+});
+
+// Updating: every field optional, and no defaults get applied
+const updateAddressSchema = baseAddressSchema.partial();
 
 export { createAddressSchema, updateAddressSchema };
