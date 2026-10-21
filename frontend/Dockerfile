@@ -1,44 +1,43 @@
-# ---- 1. Dependencies stage ----
-FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat
+
+# syntax=docker/dockerfile:1
+
+# Pin the Node image to a verified digest for strict reproducibility.
+# Replace the placeholder with the digest for your selected Node 22 Alpine image.
+ARG NODE_IMAGE=node:22-alpine
+
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
-# ---- 2. Builder stage ----
-FROM node:22-alpine AS builder
-RUN apk add --no-cache libc6-compat
+
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
+
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 RUN npm run build
 
-# ---- 3. Runner stage ----
-FROM node:22-alpine AS runner
-RUN apk add --no-cache libc6-compat
+
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 nextjs
+ && adduser --system --uid 1001 --ingroup nodejs nextjs
 
-# Set correct permissions for Next.js prerender cache
-RUN mkdir .next \
-  && chown nextjs:nodejs .next
-
-# Copy built standalone server and static assets
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -46,8 +45,5 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 EXPOSE 3000
-
-HEALTHCHECK --interval=15s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
 CMD ["node", "server.js"]

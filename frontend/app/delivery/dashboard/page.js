@@ -93,8 +93,10 @@ export default function DeliveryDashboardPage() {
   if (user && !user.isApproved) {
     return (
       <ProtectedRoute allowedRoles={["delivery"]}>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 text-yellow-800 max-w-lg">
-          Your account is pending admin approval.
+        <div className="app-shell max-w-xl">
+          <div className="soft-panel border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+            Your account is pending admin approval.
+          </div>
         </div>
       </ProtectedRoute>
     );
@@ -102,48 +104,53 @@ export default function DeliveryDashboardPage() {
 
   return (
     <ProtectedRoute allowedRoles={["delivery"]}>
-      <h1 className="text-2xl font-bold mb-6">Delivery Dashboard</h1>
-
-      {deliveryError && <p className="text-sm text-red-600 mb-4">{deliveryError}</p>}
-      {deliveryLoading && <p className="text-gray-400">Loading...</p>}
-
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-3">Available Orders</h2>
-        {!deliveryLoading && availableOrders.length === 0 && (
-          <p className="text-gray-400 text-sm">No orders available for pickup right now.</p>
-        )}
-        <div className="space-y-3 max-w-lg">
-          {availableOrders.map((order) => (
-            <AvailableOrderCard key={order._id} order={order} onAccept={acceptOrder} />
-          ))}
+      <div className="app-shell">
+        <div className="mb-6">
+          <span className="eyebrow">Delivery</span>
+          <h1 className="mt-4 section-title">Delivery Dashboard</h1>
         </div>
-      </section>
 
-      <section>
-        <h2 className="text-lg font-semibold mb-3">My Active Deliveries</h2>
-        {!deliveryLoading && myDeliveries.length === 0 && (
-          <p className="text-gray-400 text-sm">You have no assigned deliveries.</p>
-        )}
-        <div className="space-y-3 max-w-lg">
-          {myDeliveries.map((order) => (
-            <DeliveryOrderCard
-              key={order._id}
-              order={order}
-              onMarkPickedUp={markPickedUp}
-              onCancelRequest={setCancelTarget}
-              onMarkDelivered={markDelivered}
-            />
-          ))}
-        </div>
-      </section>
+        {deliveryError && <p className="mb-4 text-sm font-medium text-red-600">{deliveryError}</p>}
+        {deliveryLoading && <p className="text-sm text-slate-500">Loading...</p>}
 
-      <CancelOrderModal
-        isOpen={!!cancelTarget}
-        onClose={handleCloseCancelModal}
-        loading={cancelling}
-        reasons={DELIVERY_CANCEL_REASONS}
-        onConfirm={handleConfirmCancel}
-      />
+        <section className="mb-8">
+          <h2 className="mb-3 text-lg font-bold text-slate-900">Available Orders</h2>
+          {!deliveryLoading && availableOrders.length === 0 && (
+            <div className="soft-panel p-4 text-sm text-slate-500">No orders available for pickup right now.</div>
+          )}
+          <div className="space-y-3 max-w-2xl">
+            {availableOrders.map((order) => (
+              <AvailableOrderCard key={order._id} order={order} onAccept={acceptOrder} />
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-3 text-lg font-bold text-slate-900">My Active Deliveries</h2>
+          {!deliveryLoading && myDeliveries.length === 0 && (
+            <div className="soft-panel p-4 text-sm text-slate-500">You have no assigned deliveries.</div>
+          )}
+          <div className="space-y-3 max-w-2xl">
+            {myDeliveries.map((order) => (
+              <DeliveryOrderCard
+                key={order._id}
+                order={order}
+                onMarkPickedUp={markPickedUp}
+                onCancelRequest={setCancelTarget}
+                onMarkDelivered={markDelivered}
+              />
+            ))}
+          </div>
+        </section>
+
+        <CancelOrderModal
+          isOpen={!!cancelTarget}
+          onClose={handleCloseCancelModal}
+          loading={cancelling}
+          reasons={DELIVERY_CANCEL_REASONS}
+          onConfirm={handleConfirmCancel}
+        />
+      </div>
     </ProtectedRoute>
   );
 }

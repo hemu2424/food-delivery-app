@@ -22,15 +22,18 @@ function AddressesContent() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Saved Addresses</h1>
+    <div className="app-shell max-w-2xl">
+      <div className="mb-6">
+        <span className="eyebrow">Places</span>
+        <h1 className="mt-4 section-title">Saved Addresses</h1>
+      </div>
 
       {!showAddFlow && !editingAddress && (
         <>
-          {loading && <p className="text-gray-400">Loading...</p>}
-          {!loading && addresses.length === 0 && <p className="text-gray-400 mb-4">No saved addresses yet.</p>}
+          {loading && <p className="text-sm text-slate-500">Loading...</p>}
+          {!loading && addresses.length === 0 && <div className="soft-panel p-6 text-sm text-slate-500">No saved addresses yet.</div>}
 
-          <div className="space-y-3 mb-4">
+          <div className="space-y-3">
             {addresses.map((address) => (
               <AddressCard
                 key={address._id}
@@ -44,7 +47,7 @@ function AddressesContent() {
 
           <button
             onClick={() => setShowAddFlow(true)}
-            className="w-full border-2 border-dashed rounded-lg p-4 text-sm text-orange-600 hover:bg-orange-50"
+            className="btn-secondary mt-5 w-full justify-center"
           >
             + Add New Address
           </button>

@@ -28,7 +28,7 @@ function MenuItemListItem({
             </p>
           )}
         </div>
-        <div className="flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 shrink-0">
           <button
             type="button"
             onClick={() => onToggleEdit(item._id)}

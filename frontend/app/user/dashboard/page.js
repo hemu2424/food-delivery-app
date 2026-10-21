@@ -13,30 +13,23 @@ import { useAddresses } from "@/context/AddressContext";
 function DashboardContent() {
   const { fetchAddresses } = useAddresses();
   const { coordinates, status, LOCATION_STATUS } = useLocation();
-  const [formData, setFormData] = useState({
-    deliveryRadiusKm: "",
-  });
+  const [formData, setFormData] = useState({ deliveryRadiusKm: "" });
 
   function handleTextChange(e) {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
   const shouldFetch = status === LOCATION_STATUS.READY && coordinates;
-  const radiusQuery = formData.deliveryRadiusKm
-    ? `&radius=${formData.deliveryRadiusKm}`
-    : "";
+  const radiusQuery = formData.deliveryRadiusKm ? `&radius=${formData.deliveryRadiusKm}` : "";
 
   const { data, error, isLoading } = useSWR(
-    shouldFetch
-      ? `/restaurants/nearby?lat=${coordinates.latitude}&lng=${coordinates.longitude}${radiusQuery}`
-      : null,
+    shouldFetch ? `/restaurants/nearby?lat=${coordinates.latitude}&lng=${coordinates.longitude}${radiusQuery}` : null,
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 5000 }
   );
 
   const nearbyRestaurants = data?.restaurants ?? [];
   const nearbySearchRadiusKm = data?.searchRadiusKm ?? null;
-  const nearbyLoading = isLoading;
   const nearbyError = error ? "Could not load nearby restaurants." : "";
 
   useEffect(() => {
@@ -44,19 +37,22 @@ function DashboardContent() {
   }, [fetchAddresses]);
 
   return (
-    <>
-      <h1 className="text-2xl font-bold mb-4">Restaurants near you</h1>
+    <div className="app-shell">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <span className="eyebrow">Discover</span>
+          <h1 className="mt-4 section-title">Restaurants near you</h1>
+        </div>
+      </div>
 
       <LocationPrompt />
 
       {status === LOCATION_STATUS.READY && (
         <>
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-6 max-w-md">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="surface-card mb-6 max-w-md p-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Delivery Radius (km)
-                </label>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Delivery Radius (km)</label>
                 <input
                   name="deliveryRadiusKm"
                   type="number"
@@ -65,31 +61,34 @@ function DashboardContent() {
                   placeholder="e.g. 5, 10, 20"
                   value={formData.deliveryRadiusKm}
                   onChange={handleTextChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-200"
+                  className="input-shell"
                 />
               </div>
             </div>
           </div>
-          {nearbyLoading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => <RestaurantCardSkeleton key={i} />)}
+
+          {isLoading && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <RestaurantCardSkeleton key={i} />
+              ))}
             </div>
           )}
 
-          {nearbyError && <p className="text-red-600">{nearbyError}</p>}
+          {nearbyError && <p className="text-sm font-medium text-red-600">{nearbyError}</p>}
 
-          {!nearbyLoading && nearbyRestaurants.length === 0 && !nearbyError && (
-            <p className="text-gray-400">
+          {!isLoading && nearbyRestaurants.length === 0 && !nearbyError && (
+            <div className="surface-card p-5 text-sm text-slate-600">
               No restaurants deliver to your location right now, even within 15km. Try a different address.
-            </p>
+            </div>
           )}
 
-          {!nearbyLoading && nearbyRestaurants.length > 0 && (
+          {!isLoading && nearbyRestaurants.length > 0 && (
             <>
-              <p className="text-xs text-gray-400 mb-3">
+              <p className="mb-4 text-sm font-medium text-slate-500">
                 Showing restaurants within {nearbySearchRadiusKm} km
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {nearbyRestaurants.map((restaurant) => (
                   <RestaurantCard key={restaurant._id} restaurant={restaurant} />
                 ))}
@@ -98,14 +97,14 @@ function DashboardContent() {
           )}
         </>
       )}
-    </>
+    </div>
   );
 }
 
 export default function UserDashboardPage() {
   return (
     <ProtectedRoute allowedRoles={["user"]}>
-      <Suspense fallback={<div className="h-10 mb-6" />}>
+      <Suspense fallback={<div className="app-shell h-10" />}>
         <DashboardContent />
       </Suspense>
     </ProtectedRoute>
