@@ -151,74 +151,90 @@ export default function CheckoutPage() {
   if (!cart || cart.items.length === 0) {
     return (
       <ProtectedRoute allowedRoles={["user"]}>
-        <p className="text-gray-400">Your cart is empty.</p>
+        <div className="app-shell max-w-xl">
+          <div className="soft-panel p-6 text-sm text-slate-500">Your cart is empty.</div>
+        </div>
       </ProtectedRoute>
     );
   }
 
   return (
     <ProtectedRoute allowedRoles={["user"]}>
-      <h1 className="text-2xl font-bold mb-6">Checkout</h1>
+      <div className="app-shell max-w-2xl">
+        <div className="mb-6">
+          <span className="eyebrow">Checkout</span>
+          <h1 className="mt-4 section-title">Complete your order</h1>
+        </div>
 
-      <div className="max-w-lg mx-auto">
-        <p className="text-sm text-gray-500 mb-2">Ordering from: {cart.restaurantName}</p>
+        <div className="space-y-5">
+          <div className="surface-card p-4">
+            <p className="mb-3 text-sm font-medium text-slate-500">Ordering from: {cart.restaurantName}</p>
 
-        <div className="bg-white border rounded-lg p-4 mb-4">
-          {cart.items.map((item) => (
-            <div key={item.menuItem} className="flex justify-between text-sm py-1">
-              <span>{item.quantity} x {item.name}</span>
-              <span>₹{item.price * item.quantity}</span>
+            <div className="space-y-2">
+              {cart.items.map((item) => (
+                <div key={item.menuItem} className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                  <span>
+                    {item.quantity} × {item.name}
+                  </span>
+                  <span className="font-semibold">₹{item.price * item.quantity}</span>
+                </div>
+              ))}
             </div>
-          ))}
-          <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
-            <span>Total</span>
-            <span>₹{totalAmount}</span>
+
+            <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-base font-semibold text-slate-900">
+              <span>Total</span>
+              <span>₹{totalAmount}</span>
+            </div>
           </div>
-        </div>
 
-        <h2 className="text-sm font-semibold mb-3">Delivery Address</h2>
-        {!finalizedAddress && <CheckoutAddressPicker onFinalize={setFinalizedAddress} />}
-        {finalizedAddress && (
-          <div className="bg-gray-50 border rounded-lg p-3 mb-4">
-            <p className="text-xs text-gray-500 mb-1">Delivering to</p>
-            <p className="text-sm">{finalizedAddress.formattedAddress}</p>
-            <button onClick={() => setFinalizedAddress(null)} className="text-xs text-orange-600 hover:underline mt-1">
-              Change address
-            </button>
+          <div className="surface-card p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Delivery Address</h2>
+            {!finalizedAddress && <CheckoutAddressPicker onFinalize={setFinalizedAddress} />}
+            {finalizedAddress && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Delivering to</p>
+                <p className="text-sm leading-6 text-slate-700">{finalizedAddress.formattedAddress}</p>
+                <button onClick={() => setFinalizedAddress(null)} className="mt-2 text-xs font-medium text-orange-600 transition hover:text-orange-700 hover:underline">
+                  Change address
+                </button>
+              </div>
+            )}
           </div>
-        )}
 
-        <h2 className="text-sm font-semibold mb-3">Payment Method</h2>
-        <div className="flex gap-2 mb-4">
+          <div className="surface-card p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Payment Method</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setPaymentMethod("cod")}
+                className={`rounded-2xl border px-3 py-2.5 text-sm font-medium transition ${paymentMethod === "cod" ? "border-orange-600 bg-orange-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:text-orange-600"}`}
+              >
+                Cash on Delivery
+              </button>
+              <button
+                onClick={() => setPaymentMethod("razorpay")}
+                className={`rounded-2xl border px-3 py-2.5 text-sm font-medium transition ${paymentMethod === "razorpay" ? "border-orange-600 bg-orange-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:text-orange-600"}`}
+              >
+                Pay Online
+              </button>
+            </div>
+          </div>
+
+          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+
           <button
-            onClick={() => setPaymentMethod("cod")}
-            className={`flex-1 border rounded-md py-2 text-sm ${paymentMethod === "cod" ? "bg-orange-600 text-white border-orange-600" : ""}`}
+            onClick={handlePlaceOrder}
+            disabled={isPlacingOrder || !finalizedAddress}
+            className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Cash on Delivery
+            {isPlacingOrder ? "Processing..." : paymentMethod === "cod" ? "Place Order" : "Proceed to Pay"}
           </button>
-          <button
-            onClick={() => setPaymentMethod("razorpay")}
-            className={`flex-1 border rounded-md py-2 text-sm ${paymentMethod === "razorpay" ? "bg-orange-600 text-white border-orange-600" : ""}`}
-          >
-            Pay Online
-          </button>
+
+          {!finalizedAddress && (
+            <p className="text-center text-xs text-slate-500">
+              Please confirm your delivery address above to proceed.
+            </p>
+          )}
         </div>
-
-        {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-
-        <button
-          onClick={handlePlaceOrder}
-          disabled={isPlacingOrder || !finalizedAddress}
-          className="w-full bg-orange-600 text-white py-3 rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isPlacingOrder ? "Processing..." : paymentMethod === "cod" ? "Place Order" : "Proceed to Pay"}
-        </button>
-
-        {!finalizedAddress && (
-          <p className="text-xs text-gray-500 mt-2 text-center">
-            Please confirm your delivery address above to proceed.
-          </p>
-        )}
       </div>
     </ProtectedRoute>
   );

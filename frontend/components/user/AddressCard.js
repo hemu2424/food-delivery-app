@@ -4,28 +4,28 @@ export default function AddressCard({ address, onSelect, onEdit, onDelete, onSet
   return (
     <div
       onClick={selectable ? () => onSelect(address) : undefined}
-      className={`bg-white border rounded-lg p-4 ${selectable ? "cursor-pointer hover:border-orange-400" : ""}`}
+      className={`surface-card p-4 transition ${selectable ? "cursor-pointer hover:border-orange-200 hover:shadow-[0_12px_30px_rgba(249,115,22,0.08)]" : ""}`}
     >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-medium uppercase text-orange-600">{address.label}</span>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-700">{address.label}</span>
         {address.isDefault && (
-          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Default</span>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">Default</span>
         )}
       </div>
-      <p className="text-sm font-medium">{address.flatOrBuilding}</p>
-      <p className="text-sm text-gray-500">{address.formattedAddress}</p>
+      <p className="text-base font-semibold text-slate-900">{address.flatOrBuilding}</p>
+      <p className="mt-1 text-sm leading-6 text-slate-600">{address.formattedAddress}</p>
 
       {!selectable && (
-        <div className="flex gap-3 mt-2 text-sm">
-          <button onClick={() => onEdit(address)} className="text-blue-600 hover:underline">
+        <div className="mt-4 flex flex-wrap gap-3 text-sm">
+          <button onClick={() => onEdit(address)} className="font-medium text-blue-600 transition hover:text-blue-700 hover:underline">
             Edit
           </button>
           {!address.isDefault && (
-            <button onClick={() => onSetDefault(address._id)} className="text-orange-600 hover:underline">
+            <button onClick={() => onSetDefault(address._id)} className="font-medium text-orange-600 transition hover:text-orange-700 hover:underline">
               Set as default
             </button>
           )}
-          <button onClick={() => onDelete(address._id)} className="text-red-600 hover:underline">
+          <button onClick={() => onDelete(address._id)} className="font-medium text-red-600 transition hover:text-red-700 hover:underline">
             Delete
           </button>
         </div>

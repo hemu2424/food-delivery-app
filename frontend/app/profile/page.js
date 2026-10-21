@@ -63,83 +63,83 @@ export default function ProfilePage() {
 
   return (
     <ProtectedRoute>
-      <div className="max-w-lg mx-auto space-y-8">
-        <h1 className="text-2xl font-bold">My Profile</h1>
+      <div className="app-shell max-w-2xl space-y-6">
+        <div>
+          <span className="eyebrow">Account</span>
+          <h1 className="mt-4 section-title">My Profile</h1>
+        </div>
 
-        <form onSubmit={handleProfileSubmit} className="bg-white border rounded-lg p-4 space-y-4">
-          <h2 className="font-semibold text-sm text-gray-500">Profile Details</h2>
+        <form onSubmit={handleProfileSubmit} className="surface-card space-y-4 p-4 sm:p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Profile Details</h2>
 
           <AvatarUploader currentAvatar={user?.avatar} onChange={setAvatarFile} />
 
           <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Name</label>
             <input
               value={profileData.name}
               onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-              className="w-full border rounded-md px-3 py-2 text-sm"
+              className="input-shell"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input value={user?.email || ""} disabled className="w-full border rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-400" />
-            <p className="text-xs text-gray-400 mt-1">Email cannot be changed</p>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+            <input value={user?.email || ""} disabled className="input-shell cursor-not-allowed bg-slate-100 text-slate-400" />
+            <p className="mt-1 text-xs text-slate-400">Email cannot be changed</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Phone</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Phone</label>
             <input
               value={profileData.phone}
               onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-              className="w-full border rounded-md px-3 py-2 text-sm"
+              className="input-shell"
             />
           </div>
 
-          {profileError && <p className="text-sm text-red-600">{profileError}</p>}
+          {profileError && <p className="text-sm font-medium text-red-600">{profileError}</p>}
 
-          <button type="submit" disabled={isSavingProfile} className="bg-orange-600 text-white px-4 py-2 rounded-md text-sm hover:bg-orange-700 disabled:opacity-50">
+          <button type="submit" disabled={isSavingProfile} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">
             {isSavingProfile ? "Saving..." : "Save Changes"}
           </button>
         </form>
 
-        <form onSubmit={handlePasswordSubmit} className="bg-white border rounded-lg p-4 space-y-4">
-          <h2 className="font-semibold text-sm text-gray-500">Change Password</h2>
+        <form onSubmit={handlePasswordSubmit} className="surface-card space-y-4 p-4 sm:p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Change Password</h2>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Current Password</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Current Password</label>
             <input
               type="password"
               required
               value={passwordData.currentPassword}
               onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-              className="w-full border rounded-md px-3 py-2 text-sm"
+              className="input-shell"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">New Password</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">New Password</label>
             <input
               type="password"
               required
               minLength={6}
               value={passwordData.newPassword}
               onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-              className="w-full border rounded-md px-3 py-2 text-sm"
+              className="input-shell"
             />
           </div>
 
-          {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+          {passwordError && <p className="text-sm font-medium text-red-600">{passwordError}</p>}
 
-          <button type="submit" disabled={isSavingPassword} className="bg-orange-600 text-white px-4 py-2 rounded-md text-sm hover:bg-orange-700 disabled:opacity-50">
+          <button type="submit" disabled={isSavingPassword} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">
             {isSavingPassword ? "Changing..." : "Change Password"}
           </button>
         </form>
 
-        <Link
-          href="/user/addresses"
-          className="block bg-white border rounded-lg p-4 text-sm hover:border-orange-400"
-        >
-          <span className="font-medium">Manage Saved Addresses →</span>
+        <Link href="/user/addresses" className="surface-card block p-4 text-sm font-medium text-slate-700 transition hover:border-orange-200 hover:text-orange-600">
+          Manage Saved Addresses →
         </Link>
       </div>
     </ProtectedRoute>

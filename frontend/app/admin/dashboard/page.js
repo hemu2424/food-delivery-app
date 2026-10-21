@@ -32,17 +32,22 @@ export default function AdminDashboardPage() {
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="app-shell">
+        <div className="mb-6">
+          <span className="eyebrow">Operations</span>
+          <h1 className="mt-4 section-title">Admin Dashboard</h1>
+        </div>
 
-      {statsLoading && <p className="text-gray-400">Loading stats...</p>}
+        {statsLoading && <p className="text-sm text-slate-500">Loading stats...</p>}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {cards.map((card) => (
-          <div key={card.label} className="bg-white border rounded-lg p-4 shadow-sm">
-            <p className="text-sm text-gray-500">{card.label}</p>
-            <p className="text-2xl font-bold mt-1">{card.value}</p>
-          </div>
-        ))}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+          {cards.map((card) => (
+            <div key={card.label} className="surface-card p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{card.label}</p>
+              <p className="mt-3 text-2xl font-bold text-slate-900">{card.value}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </ProtectedRoute>
   );
