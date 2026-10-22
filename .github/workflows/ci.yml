@@ -85,7 +85,6 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write
 
     steps:
       - name: Checkout repository
@@ -103,11 +102,13 @@ jobs:
           echo "Repository: $REPOSITORY"
           echo "Ref type: $REF_TYPE"
 
-      - name: Configure AWS credentials using OIDC
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
+
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
