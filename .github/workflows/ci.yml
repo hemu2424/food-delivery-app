@@ -91,6 +91,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Inspect GitHub workflow context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          echo "Event: $EVENT_NAME"
+          echo "Ref: $REF"
+          echo "Repository: $REPOSITORY"
+          echo "Ref type: $REF_TYPE"
+
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v6
         with:
